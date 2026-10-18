@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rotem Kenan · Event Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+      "jszip": "https://cdn.jsdelivr.net/npm/jszip@3.10.1/+esm",
+      "dxf-parser": "https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/+esm"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">Rotem Kenan <span>Event Studio</span></div>
+    <input id="eventName" class="event-name" placeholder="Event name — e.g. Noa &amp; Daniel, Garden Wedding" />
+    <nav class="tabs">
+      <button data-view="plan" class="active">2D Plan</button>
+      <button data-view="3d">3D View</button>
+      <button data-view="mood">Mood Board</button>
+    </nav>
+    <div class="actions">
+      <button id="saveProject">Save</button>
+      <button id="exportProject">Export project</button>
+      <label class="btn">Open project<input type="file" id="importProject" accept=".json" hidden /></label>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <section>
+        <h3>1 · Venue plan</h3>
+        <label class="drop">Upload venue drawing (.dxf)<input type="file" id="venueFile" accept=".dxf,.dwg" hidden /></label>
+        <p class="hint">DWG files: save as DXF first (AutoCAD “Save As → DXF”, or the free ODA File Converter / Autodesk Viewer). </p>
+        <div class="row">
+          <label>Drawing units
+            <select id="venueUnits">
+              <option value="auto">Auto</option><option value="mm">mm</option><option value="cm">cm</option><option value="m">m</option>
+            </select>
+          </label>
+          <label>Wall height (cm)<input type="number" id="wallHeight" value="320" /></label>
+        </div>
+        <details id="layerBox"><summary>Layers</summary><div id="layerList"></div></details>
+        <button id="demoVenue" class="ghost">No file yet? Load a demo hall</button>
+      </section>
+
+      <section>
+        <h3>2 · Mood board</h3>
+        <label class="drop">Upload mood board (.pptx)<input type="file" id="moodFile" accept=".pptx" hidden /></label>
+        <div id="palette" class="palette"></div>
+        <p class="hint">Click a swatch, then click a furniture item's colour to apply it.</p>
+      </section>
+
+      <section>
+        <h3>3 · Furniture selection</h3>
+        <div class="row">
+          <select id="presetSelect"></select>
+          <button id="addPreset">Add</button>
+        </div>
+        <div id="furnitureList" class="furniture-list"></div>
+      </section>
+
+      <section>
+        <h3>4 · Layout</h3>
+        <button id="autoLayout" class="primary">✨ Suggest a layout</button>
+        <button id="clearLayout" class="ghost">Clear placed items</button>
+        <button id="exportDxf">Download new DXF plan</button>
+      </section>
+    </aside>
+
+    <section class="stage">
+      <div id="planView" class="view active">
+        <canvas id="planCanvas"></canvas>
+        <div class="toolbar">
+          <label><input type="checkbox" id="snapToggle" checked /> Snap 10cm</label>
+          <button id="fitView">Fit</button>
+          <span class="hint">Drag items · wheel = zoom · drag empty = pan · R rotate · Del delete · Ctrl+D duplicate</span>
+        </div>
+        <div id="inspector" class="inspector hidden"></div>
+      </div>
+      <div id="threeView" class="view">
+        <div id="threeHost"></div>
+        <div class="toolbar">
+          <button data-cam="perspective">Guest view</button>
+          <button data-cam="top">Top</button>
+          <button data-cam="entrance">Entrance</button>
+          <button data-cam="stage">From stage</button>
+          <button data-cam="corner">Corner</button>
+          <label>Lighting
+            <select id="lightMood"><option value="evening">Evening warm</option><option value="day">Daylight</option><option value="party">Party</option></select>
+          </label>
+          <button id="renderShot" class="primary">📷 Save render</button>
+          <button id="renderAll">Render all angles</button>
+        </div>
+      </div>
+      <div id="moodView" class="view">
+        <div id="moodGallery" class="mood-gallery"><p class="hint">Upload a PowerPoint mood board to see its images and palette here.</p></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
