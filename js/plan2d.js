@@ -74,6 +74,7 @@ export function draw(clean = false) {
     drawItem(p, it, state.selection.includes(p.id), bad.has(p.id));
   }
   if (!clean) drawOverlay();
+  if (!clean) drawGhosts();
   if (!clean && document.getElementById('seatsToggle')?.checked) drawSeatBadges();
 
   // scale bar
@@ -190,6 +191,26 @@ function drawOverlay() {
   }
   if (hover && !drag) { const it = itemOf(hover); if (it) { const c = toScreen(hover.x, hover.y); label(c.x, c.y - (Math.max(it.w, it.d) / 2) * view.scale - 14, `${tName(it)} · ${it.w}×${it.d}`, '#1b1918'); } }
 }
+// suggestion ghosts: see-through pieces with a dashed green outline; click one to place it
+let ghosts = [];
+export const setGhosts = (g) => { ghosts = g || []; draw(); };
+function drawGhosts() {
+  for (const g of ghosts) {
+    ctx.save(); ctx.globalAlpha = 0.4; drawItem({ ...g, id: 'ghost' }, g.inv, false, false); ctx.restore();
+    const P = footprint(g, g.inv).map((q) => toScreen(q.x, q.y));
+    ctx.save(); ctx.strokeStyle = '#2e8b57'; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+    ctx.beginPath(); P.forEach((q, i) => (i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y))); ctx.closePath(); ctx.stroke(); ctx.restore();
+    const c = toScreen(g.x, g.y);
+    ctx.save(); ctx.fillStyle = '#2e8b57'; ctx.beginPath(); ctx.arc(c.x, c.y, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px Inter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(`+${g.seats}`, c.x, c.y + 0.5); ctx.restore();
+  }
+}
+function ghostAt(x, y) {
+  for (let i = ghosts.length - 1; i >= 0; i--) { const g = ghosts[i], a = (-g.rot * Math.PI) / 180, dx = x - g.x, dy = y - g.y;
+    const u = dx * Math.cos(a) - dy * Math.sin(a), v = dx * Math.sin(a) + dy * Math.cos(a);
+    if (Math.abs(u) <= g.inv.w / 2 && Math.abs(v) <= g.inv.d / 2) return i; }
+  return -1;
+}
 // seat-count badges: the number each piece adds to the seat total
 function drawSeatBadges() {
   let total = 0;
@@ -257,7 +278,7 @@ function polyOf(p, it) {
   const extra = it.seats > 0 ? CHAIR_ZONE : 0;
   return footprint(p, { w: it.w + extra * 2, d: it.d + extra * 2 });
 }
-function sat(A, B) {
+export function sat(A, B) {
   for (const P of [A, B]) for (let i = 0; i < P.length; i++) {
     const a = P[i], b = P[(i + 1) % P.length], nx = b.y - a.y, ny = a.x - b.x;
     const pr = (Q) => Q.map((q) => q.x * nx + q.y * ny);
@@ -267,7 +288,7 @@ function sat(A, B) {
   return true;
 }
 // A curved sofa is checked as 8 small blocks along its arc, so its open middle stays free (tables go there).
-function shapesOf(p, it) {
+export function shapesOf(p, it) {
   if (it.kind !== 'curvedSofa') return [polyOf(p, it)];
   const g = curvedGeom(it), n = 8, a = (p.rot * Math.PI) / 180, out = [];
   for (let i = 0; i < n; i++) {
@@ -409,6 +430,8 @@ canvas.addEventListener('pointerdown', (e) => {
     const it = itemOf(sel[0]), h = rotateHandle(sel[0], it);
     if (Math.hypot(sx - h.x, sy - h.y) < 10) { drag = { mode: 'rotate', p: sel[0] }; return; }
   }
+  const gi = ghosts.length ? ghostAt(w.x, w.y) : -1;
+  if (gi >= 0) { const [g] = ghosts.splice(gi, 1); canvas.dispatchEvent(new CustomEvent('ghost-accept', { detail: [g] })); draw(); return; }
   const p = hit(w.x, w.y);
   if (p) {
     if (e.shiftKey || e.ctrlKey || e.metaKey) setSelection(state.selection.includes(p.id) ? state.selection.filter((i) => i !== p.id) : [...state.selection, p.id]);

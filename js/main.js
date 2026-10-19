@@ -515,3 +515,22 @@ initMood(toast);
 })();
 
 $('seatsToggle').onchange = () => plan.draw();
+
+// ---------- seat suggestions (ghosts) ----------
+import('./suggest.js').then(({ suggestSeats }) => {
+  const setG = (g) => { plan.setGhosts(g); $('ghostTools').classList.toggle('hidden', !g.length); };
+  let current = [];
+  $('suggestSeats').onclick = () => {
+    const have = state.placed.reduce((s, p) => s + seatsOf(itemOf(p)), 0), need = Math.max(0, (+state.brief?.guests || 0) - have);
+    current = suggestSeats(need || Infinity);
+    setG(current);
+    toast(current.length ? t('ghostFound', { n: current.length, seats: current.reduce((s, g) => s + g.seats, 0) }) : t('ghostNone'));
+  };
+  const accept = (list) => {
+    for (const g of list) { const f = furnitureFor(g.inv); state.placed.push({ id: newId('p'), itemId: f.id, x: Math.round(g.x), y: Math.round(g.y), rot: Math.round(g.rot) }); }
+    current = current.filter((g) => !list.includes(g)); emit('placed'); setG(current);
+  };
+  $('planCanvas').addEventListener('ghost-accept', (e) => accept(e.detail));
+  $('ghostAll').onclick = () => accept([...current]);
+  $('ghostClear').onclick = () => { current = []; setG([]); };
+});
