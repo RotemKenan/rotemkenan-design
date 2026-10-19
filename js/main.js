@@ -67,7 +67,20 @@ async function renderEventSelect() {
 }
 $('eventSelect').onchange = async (e) => { await saveProject(); await openProject(e.target.value); afterOpen(); toast(t('opened')); };
 $('newEvent').onclick = async () => { await saveProject(); newProject(t('newEventName')); await saveProject(); afterOpen(); showView('mood'); $('eventName').select(); };
-$('dupEvent').onclick = async () => { await saveProject(); load({ ...JSON.parse(serialize()), id: newId('ev'), eventName: `${state.eventName} (2)` }); await saveProject(); afterOpen(); closeMenu(); };
+async function renameEvent(suggest) {
+  const name = prompt(t('renamePrompt'), suggest ?? state.eventName ?? '');
+  if (name == null || !name.trim()) return false;
+  state.eventName = name.trim(); $('eventName').value = state.eventName; emit('brief'); await saveProject(); await renderEventSelect(); return true;
+}
+$('renameEvent').onclick = async () => { closeMenu(); await renameEvent(); };
+$('dupEvent').onclick = async () => {
+  closeMenu(); await saveProject();
+  const base = (state.eventName || '').replace(/\s*(\(\d+\)|[-–·]\s*(v|גרסה)\s*\d+)$/i, '');
+  const names = (await listProjects()).map((p) => p.eventName || '');
+  let n = 2; while (names.includes(`${base} – v${n}`)) n++;
+  load({ ...JSON.parse(serialize()), id: newId('ev'), eventName: `${base} – v${n}` }); await saveProject(); afterOpen();
+  await renameEvent(state.eventName);
+};
 $('delEvent').onclick = async () => {
   if (!confirm(t('confirmDelete', { name: state.eventName || t('untitled') }))) return;
   await deleteProject(state.id);

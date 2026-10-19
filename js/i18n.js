@@ -1,7 +1,7 @@
 // English / Hebrew UI. Static text uses data-i18n / data-i18n-ph / data-i18n-title; code uses t(key, vars).
 const EN = {
   appName: 'Event Studio', byline: 'by Rotem Kenan', tagline: 'See the event before the first guest walks in.',
-  newEvent: 'New event', duplicateEvent: 'Duplicate event', exportProject: 'Export event file', openProject: 'Open event file', deleteEvent: 'Delete event',
+  newEvent: 'New event', duplicateEvent: 'Duplicate as new version', renameEvent: 'Rename event', renamePrompt: 'Event / version name', exportProject: 'Export event file', openProject: 'Open event file', deleteEvent: 'Delete event',
   tabMood: 'Mood', tabPlan: '2D Plan', tab3d: '3D', tabSplit: '2D + 3D', tabInventory: 'Inventory', tabPresent: 'Presentation',
   briefTitle: 'Event details', eventNamePh: 'Event name — e.g. Noa & Daniel', client: 'Client', eventType: 'Type', date: 'Date', guests: 'Guests', venueName: 'Venue',
   typeWedding: 'Wedding', typeHenna: 'Henna', typeBar: 'Bar / Bat Mitzvah', typeBirthday: 'Birthday', typeCorporate: 'Corporate', typePrivate: 'Private party',
@@ -41,7 +41,7 @@ const EN = {
 
 const HE = {
   appName: 'סטודיו אירועים', byline: 'מאת רותם קינן', tagline: 'לראות את האירוע עוד לפני שהאורח הראשון נכנס.',
-  newEvent: 'אירוע חדש', duplicateEvent: 'שכפול אירוע', exportProject: 'ייצוא קובץ אירוע', openProject: 'פתיחת קובץ אירוע', deleteEvent: 'מחיקת אירוע',
+  newEvent: 'אירוע חדש', duplicateEvent: 'שכפול כגרסה חדשה', renameEvent: 'שינוי שם האירוע', renamePrompt: 'שם האירוע / הגרסה', exportProject: 'ייצוא קובץ אירוע', openProject: 'פתיחת קובץ אירוע', deleteEvent: 'מחיקת אירוע',
   tabMood: 'מודבורד', tabPlan: 'תוכנית 2D', tab3d: 'תלת־ממד', tabSplit: '2D + 3D', tabInventory: 'מלאי', tabPresent: 'מצגת',
   briefTitle: 'פרטי האירוע', eventNamePh: 'שם האירוע — למשל נועה ודניאל', client: 'לקוח', eventType: 'סוג', date: 'תאריך', guests: 'אורחים', venueName: 'מקום',
   typeWedding: 'חתונה', typeHenna: 'חינה', typeBar: 'בר / בת מצווה', typeBirthday: 'יום הולדת', typeCorporate: 'אירוע חברה', typePrivate: 'אירוע פרטי',
