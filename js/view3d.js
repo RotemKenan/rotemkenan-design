@@ -2,12 +2,15 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { state, itemOf } from './state.js';
+import { state, itemOf, emit } from './state.js';
 import { venueBounds, visibleSegments } from './dxf.js';
 import { buildItem, M } from './models.js';
+import { texMat } from './textures.js';
 
 const host = document.getElementById('threeHost');
 let renderer, scene, camera, controls, root, lights, framed = false;
+const groups = new Map(); // placed id → THREE.Group
+let selBoxes = [];
 
 function init() {
   renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -26,8 +29,68 @@ function init() {
   controls.enableDamping = true;
   controls.maxPolarAngle = Math.PI / 2 - 0.02;
 
-  const loop = () => { requestAnimationFrame(loop); controls.update(); renderer.render(scene, camera); };
+  const loop = () => { requestAnimationFrame(loop); if (!host.offsetParent) return; controls.update(); selBoxes.forEach((b) => b.update()); renderer.render(scene, camera); };
   loop();
+  initPicking();
+}
+
+// ---------- click to select, drag on the floor to move ----------
+function initPicking() {
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), floor = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitPt = new THREE.Vector3();
+  let drag = null, down = null;
+  const el = renderer.domElement;
+  const setRay = (e) => { const r = el.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera); };
+  const pidOf = (obj) => { while (obj && !obj.userData.pid) obj = obj.parent; return obj?.userData.pid; };
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    down = { x: e.clientX, y: e.clientY };
+    setRay(e);
+    const hits = ray.intersectObjects([...groups.values()], true);
+    const pid = hits.length ? pidOf(hits[0].object) : null;
+    if (!pid) return;
+    const p = state.placed.find((q) => q.id === pid);
+    if (!state.selection.includes(pid)) { state.selection = e.shiftKey ? [...state.selection, pid] : [pid]; state.selectedId = pid; emit('select'); }
+    if (p.locked) return;
+    ray.ray.intersectPlane(floor, hitPt);
+    drag = { start: hitPt.clone(), items: state.placed.filter((q) => state.selection.includes(q.id) && !q.locked).map((q) => ({ q, x: q.x, y: q.y })) };
+    controls.enabled = false;
+    el.setPointerCapture(e.pointerId);
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    setRay(e);
+    if (!ray.ray.intersectPlane(floor, hitPt)) return;
+    const dx = (hitPt.x - drag.start.x) / M, dy = -(hitPt.z - drag.start.z) / M;
+    const snap = document.getElementById('snapToggle')?.checked ? (v) => Math.round(v / 10) * 10 : (v) => v;
+    for (const o of drag.items) { o.q.x = snap(o.x + dx); o.q.y = snap(o.y + dy); }
+    emit('move');
+  });
+  el.addEventListener('pointerup', (e) => {
+    if (drag) { drag = null; controls.enabled = true; emit('placed'); return; }
+    if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 4) { // plain click on empty space
+      setRay(e);
+      if (!ray.intersectObjects([...groups.values()], true).length && state.selection.length) { state.selection = []; state.selectedId = null; emit('select'); }
+    }
+    down = null;
+  });
+}
+
+// Move existing models to match the plan (cheap — used while dragging). Returns false if a full rebuild is needed.
+export function sync() {
+  if (!root) return false;
+  if (groups.size !== state.placed.length) { rebuild(); return true; }
+  for (const p of state.placed) {
+    const g = groups.get(p.id); if (!g) { rebuild(); return true; }
+    g.position.set(p.x * M, 0, -p.y * M); g.rotation.y = (p.rot * Math.PI) / 180;
+  }
+  highlight();
+  return true;
+}
+
+export function highlight() {
+  if (!scene) return;
+  selBoxes.forEach((b) => scene.remove(b));
+  selBoxes = state.selection.map((id) => groups.get(id)).filter(Boolean).map((g) => { const b = new THREE.BoxHelper(g, '#e8a24a'); scene.add(b); return b; });
 }
 
 export function resize() {
@@ -55,15 +118,16 @@ export function rebuild() {
   const b = state.venue ? venueBounds(state.venue) : { minX: 0, minY: 0, maxX: 2000, maxY: 1500 };
   const W = (b.maxX - b.minX) * M, D = (b.maxY - b.minY) * M;
   const cx = (b.minX + b.maxX) / 2 * M, cz = -(b.minY + b.maxY) / 2 * M;
-  const pal = state.mood.palette;
+  const roles = state.mood.roles || {};
 
   // floor
-  const floor = mesh(new THREE.PlaneGeometry(W + 4, D + 4), mat(pal[3] ? shade(pal[3], 0.9) : '#cdbfae', { roughness: 0.55 }), cx, 0, cz);
+  const floorMat = roles.floor ? texMat('walnut', roles.floor, Math.max(W, D) / 1.5, { roughness: 0.5 }) : mat('#cdbfae', { roughness: 0.55 });
+  const floor = mesh(new THREE.PlaneGeometry(W + 4, D + 4), floorMat, cx, 0, cz);
   floor.rotation.x = -Math.PI / 2; root.add(floor);
 
   // walls from venue segments
   const wallH = (state.venue?.wallHeight || 320) * M;
-  const wallMat = mat(pal[0] ? shade(pal[0], 1) : '#f2ece4', { roughness: 0.95 });
+  const wallMat = texMat('linen', roles.walls || '#f2ece4', 3, { roughness: 0.95 });
   for (const s of visibleSegments(state.venue)) {
     const dx = (s.x2 - s.x1) * M, dz = -(s.y2 - s.y1) * M, len = Math.hypot(dx, dz);
     if (len < 0.05) continue;
@@ -75,15 +139,19 @@ export function rebuild() {
     root.add(wmesh);
   }
 
+  groups.clear();
   for (const p of state.placed) {
     const it = itemOf(p); if (!it) continue;
     const g = buildItem(it);
+    g.userData.pid = p.id;
     g.position.set(p.x * M, 0, -p.y * M);
     g.rotation.y = (p.rot * Math.PI) / 180;
+    groups.set(p.id, g);
     root.add(g);
   }
 
   setLighting(document.getElementById('lightMood').value, { cx, cz, W, D, wallH });
+  highlight();
   root.userData = { cx, cz, W, D, wallH };
   if (!framed) { setCamera('perspective'); framed = true; }
 }
@@ -95,6 +163,7 @@ export function setLighting(mood, dims = root?.userData) {
   const { cx, cz, W, D, wallH } = dims;
   const presets = {
     evening: { bg: '#1f1a17', amb: ['#ffdcb0', 0.35], key: ['#ffd2a0', 1.2], spot: '#ffbf80', exp: 1.0 },
+    candle: { bg: '#120d0a', amb: ['#ffb877', 0.18], key: ['#ffb877', 0.45], spot: '#ffa95e', exp: 1.15 },
     day: { bg: '#e9e4dc', amb: ['#ffffff', 0.8], key: ['#ffffff', 2.2], spot: '#ffffff', exp: 1.1 },
     party: { bg: '#120f1a', amb: ['#a58cff', 0.25], key: ['#ff9ad5', 0.8], spot: '#8fd3ff', exp: 1.0 },
   };
@@ -128,24 +197,41 @@ export function setCamera(name) {
     entrance: [[cx + (cx - sx) * 0.9, eye, cz + (cz - sz) * 0.9], [sx, 1, sz]],
     stage: [[sx, eye + 0.6, sz], [cx + (cx - sx), 0.8, cz + (cz - sz)]],
     corner: [[cx - W / 2 + 0.8, wallH - 0.3, cz + D / 2 - 0.8], [cx, 0.6, cz]],
+    walk: [[cx - W * 0.25, eye, cz + D * 0.3], [cx + W * 0.1, 1.2, cz - D * 0.2]],
   };
   const [pos, tgt] = views[name] || views.perspective;
   camera.position.set(...pos); controls.target.set(...tgt); controls.update();
 }
 
-export function snapshot(name = 'render') {
-  const w = 2400, h = 1350;
+// Render the current camera at high resolution and return a PNG data URL (selection boxes hidden).
+export function capture(w = 2400, h = 1350, type = 'image/png') {
+  if (!renderer) rebuild();
+  selBoxes.forEach((b) => (b.visible = false));
   const old = renderer.getSize(new THREE.Vector2());
   renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
   renderer.render(scene, camera);
-  const url = renderer.domElement.toDataURL('image/png');
-  renderer.setSize(old.x, old.y, false); camera.aspect = old.x / old.y; camera.updateProjectionMatrix();
+  const url = renderer.domElement.toDataURL(type, 0.9);
+  renderer.setSize(old.x, old.y, false); camera.aspect = old.x / old.y || 1; camera.updateProjectionMatrix();
+  selBoxes.forEach((b) => (b.visible = true));
+  return url;
+}
+
+export function snapshot(name = 'render') {
   const a = document.createElement('a');
-  a.href = url; a.download = `${(state.eventName || 'event').replace(/[^\w\- ]/g, '')} - ${name}.png`; a.click();
+  a.href = capture(); a.download = `${(state.eventName || 'event').replace(/[\\/:*?"<>|]/g, '')} - ${name}.png`; a.click();
+}
+
+// Renders of several angles (for the presentation).
+export function captureViews(names = ['perspective', 'entrance', 'walk', 'corner']) {
+  rebuild();
+  const saved = [camera.position.clone(), controls.target.clone()];
+  const out = names.map((n) => { setCamera(n); return { name: n, url: capture(1600, 900, 'image/jpeg') }; });
+  camera.position.copy(saved[0]); controls.target.copy(saved[1]); controls.update();
+  return out;
 }
 
 export function renderAll() {
-  ['perspective', 'entrance', 'stage', 'corner', 'top'].forEach((v, i) => setTimeout(() => { setCamera(v); controls.update(); snapshot(v); }, i * 500));
+  ['perspective', 'entrance', 'walk', 'stage', 'corner', 'top'].forEach((v, i) => setTimeout(() => { setCamera(v); controls.update(); snapshot(v); }, i * 500));
 }
 
 // Close-up of a plan point (cm), used for detail checks.

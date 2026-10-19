@@ -1,51 +1,114 @@
-import { state, PRESETS, INVENTORY, onChange, emit, addFurniture, serialize, load } from './state.js';
+import {
+  state, PRESETS, INVENTORY, onChange, emit, addFurniture, serialize, load, itemOf,
+  newProject, saveProject, listProjects, openProject, deleteProject, restoreLastProject, newId,
+  commitHistory, undo, redo, canUndo, canRedo,
+} from './state.js';
 import { parseVenue, demoVenue, exportDxf } from './dxf.js';
-import { readMoodBoard } from './pptx.js';
 import { suggestLayout } from './layout.js';
 import * as plan from './plan2d.js';
 import * as view3d from './view3d.js';
 import { initInventory, renderInventory, showPreview } from './inventory.js';
+import { initMood, renderMood, renderSidebarPalette, getActiveColor } from './mood.js';
+import { buildPresentation } from './present.js';
+import { t, applyLang, getLang, itemName } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
-let activeSwatch = null;
 let currentView = 'plan';
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function toast(msg) {
-  const t = $('toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 3200);
+  const el = $('toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 3200);
 }
-
 function download(name, content, type) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([content], { type }));
   a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
-const fileBase = () => (state.eventName || 'event').replace(/[^\w\- ]/g, '').trim() || 'event';
+const fileBase = () => (state.eventName || 'event').replace(/[\\/:*?"<>|]/g, '').trim() || 'event';
+plan.setNamer(itemName);
 
-// ---------- tabs ----------
-document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => {
-  document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('active', x === b));
-  currentView = b.dataset.view;
-  $('planView').classList.toggle('active', currentView === 'plan');
-  $('threeView').classList.toggle('active', currentView === '3d');
-  $('moodView').classList.toggle('active', currentView === 'mood');
-  $('invView').classList.toggle('active', currentView === 'inventory');
-  if (currentView === 'inventory') { renderInventory(); showPreview(); }
-  if (currentView === 'plan') plan.resize();
-  if (currentView === '3d') { view3d.rebuild(); view3d.resize(); }
-}));
+// ---------- views ----------
+function showView(v) {
+  currentView = v;
+  document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('active', x.dataset.view === v));
+  const split = v === 'split';
+  $('stage').classList.toggle('split', split);
+  $('planView').classList.toggle('active', v === 'plan' || split);
+  $('threeView').classList.toggle('active', v === '3d' || split);
+  $('moodView').classList.toggle('active', v === 'mood');
+  $('invView').classList.toggle('active', v === 'inventory');
+  $('presentView').classList.toggle('active', v === 'present');
+  requestAnimationFrame(() => {
+    if (v === 'plan' || split) { plan.resize(); plan.fit(); }
+    if (v === '3d' || split) { view3d.rebuild(); view3d.resize(); }
+    if (v === 'inventory') { renderInventory(); showPreview(); }
+    if (v === 'present') { $('presentDoc').innerHTML = `<p class="hint">${t('building')}</p>`; setTimeout(buildPresentation, 30); }
+  });
+}
+document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => showView(b.dataset.view)));
+document.querySelectorAll('[data-goto]').forEach((b) => b.addEventListener('click', () => showView(b.dataset.goto)));
+const show3d = () => currentView === '3d' || currentView === 'split';
+
+// ---------- events (projects) ----------
+async function renderEventSelect() {
+  const all = await listProjects().catch(() => []);
+  const cur = all.find((p) => p.id === state.id);
+  if (cur) Object.assign(cur, { eventName: state.eventName, brief: state.brief }); else all.unshift({ id: state.id, eventName: state.eventName, brief: state.brief });
+  $('eventSelect').innerHTML = all.map((p) => `<option value="${p.id}" ${p.id === state.id ? 'selected' : ''}>${esc(p.eventName || t('untitled'))}${p.brief?.date ? ' · ' + p.brief.date : ''}</option>`).join('');
+}
+$('eventSelect').onchange = async (e) => { await saveProject(); await openProject(e.target.value); afterOpen(); toast(t('opened')); };
+$('newEvent').onclick = async () => { await saveProject(); newProject(t('newEventName')); await saveProject(); afterOpen(); showView('mood'); $('eventName').select(); };
+$('dupEvent').onclick = async () => { await saveProject(); load({ ...JSON.parse(serialize()), id: newId('ev'), eventName: `${state.eventName} (2)` }); await saveProject(); afterOpen(); closeMenu(); };
+$('delEvent').onclick = async () => {
+  if (!confirm(t('confirmDelete', { name: state.eventName || t('untitled') }))) return;
+  await deleteProject(state.id);
+  if (!(await restoreLastProject())) { newProject(t('newEventName')); await saveProject(); }
+  afterOpen(); closeMenu();
+};
+$('exportProject').onclick = () => { download(`${fileBase()}.event.json`, serialize(), 'application/json'); closeMenu(); };
+$('importProject').onchange = async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const data = JSON.parse(await f.text()); load({ ...data, id: data.id || newId('ev') }); await saveProject(); afterOpen(); toast(t('opened')); } catch { toast(t('badFile')); }
+  e.target.value = ''; closeMenu();
+};
+const closeMenu = () => document.querySelector('.menu')?.removeAttribute('open');
+function afterOpen() { renderEventSelect(); plan.fit(); if (show3d()) view3d.rebuild(); }
+
+// ---------- brief ----------
+const briefFields = { briefClient: 'client', briefType: 'type', briefDate: 'date', briefGuests: 'guests', briefVenue: 'venueName' };
+for (const [id, k] of Object.entries(briefFields)) $(id).addEventListener('change', (e) => { state.brief[k] = k === 'guests' ? +e.target.value : e.target.value; emit('brief'); });
+$('eventName').addEventListener('input', (e) => { state.eventName = e.target.value; emit('brief'); });
+function renderBrief() {
+  $('eventName').value = state.eventName || '';
+  for (const [id, k] of Object.entries(briefFields)) $(id).value = state.brief[k] || '';
+  $('briefType').value = state.brief.type || 'wedding';
+}
+function renderStats() {
+  const seats = state.placed.reduce((s, p) => s + (itemOf(p)?.seats || 0), 0);
+  const g = +state.brief.guests || 0, lines = [];
+  if (g) lines.push(`<b>${t('seatsOf', { seats, guests: g })}</b> — ${seats >= g ? `<span class="ok">${t('seatsOk')}</span>` : `<span class="warn">${t('seatsShort', { n: g - seats })}</span>`}`);
+  else if (seats) lines.push(t('seatsOnly', { seats }));
+  for (const inv of INVENTORY) {
+    const used = state.placed.filter((p) => itemOf(p)?.invId === inv.id).length;
+    if (inv.stock > 0 && used > inv.stock) lines.push(`<span class="warn">${t('overStock', { name: esc(itemName({ ...inv, invId: inv.id })), used, stock: inv.stock })}</span>`);
+  }
+  const clash = plan.overlaps().size;
+  if (clash) lines.push(`<span class="warn">${t('clashes', { n: clash })}</span>`);
+  $('guestStats').innerHTML = lines.join('<br>');
+}
 
 // ---------- venue ----------
 $('venueFile').addEventListener('change', async (e) => {
   const f = e.target.files[0]; if (!f) return;
-  if (/\.dwg$/i.test(f.name)) { toast('DWG is a closed format — please save it as DXF first (see hint).'); return; }
+  if (/\.dwg$/i.test(f.name)) { toast(t('dwgClosed')); e.target.value = ''; return; }
   try {
     state.venue = parseVenue(await f.text(), $('venueUnits').value);
     state.venue.wallHeight = +$('wallHeight').value || 320;
-    toast(`Loaded ${f.name}: ${state.venue.segments.length} lines`);
+    toast(t('dxfLoaded', { name: f.name, n: state.venue.segments.length }));
     emit('venue'); plan.fit();
-  } catch (err) { toast('Could not read DXF: ' + err.message); }
+  } catch (err) { toast(t('dxfError', { msg: err.message })); }
   e.target.value = '';
 });
 $('demoVenue').addEventListener('click', () => {
@@ -53,93 +116,97 @@ $('demoVenue').addEventListener('click', () => {
   if (!state.furniture.length) {
     addFurniture(PRESETS[0], 18); addFurniture(PRESETS[4], 1); addFurniture(PRESETS[10], 1);
     addFurniture(PRESETS[9], 1); addFurniture(PRESETS[8], 1); addFurniture(PRESETS[12], 4);
-    addFurniture(INVENTORY[10], 2); addFurniture(INVENTORY[12], 4); addFurniture(INVENTORY[1], 2); addFurniture(INVENTORY[6], 6);
+    const inv = (id) => INVENTORY.find((i) => i.id === id);
+    addFurniture(inv('curved-rust'), 2); addFurniture(inv('slipper-green'), 4); addFurniture(inv('low-round-linen'), 2); addFurniture(inv('bistro-candle'), 6); addFurniture(inv('pouf-damask'), 2);
   }
-  toast('Demo hall loaded (28 × 18 m)');
+  toast(t('demoLoaded'));
 });
 $('wallHeight').addEventListener('change', () => { if (state.venue) { state.venue.wallHeight = +$('wallHeight').value; emit('venue'); } });
-
 function renderLayers() {
   const box = $('layerList'); box.innerHTML = '';
   if (!state.venue) return;
+  $('wallHeight').value = state.venue.wallHeight || 320;
   for (const name of Object.keys(state.venue.layers)) {
     const l = document.createElement('label');
-    l.innerHTML = `<span><input type="checkbox" ${state.venue.layers[name] ? 'checked' : ''}/> ${name}</span>`;
+    l.innerHTML = `<span><input type="checkbox" ${state.venue.layers[name] ? 'checked' : ''}/> ${esc(name)}</span>`;
     l.querySelector('input').addEventListener('change', (e) => { state.venue.layers[name] = e.target.checked; emit('venue'); });
     box.append(l);
   }
 }
 
-// ---------- mood board ----------
-$('moodFile').addEventListener('change', async (e) => {
-  const f = e.target.files[0]; if (!f) return;
-  toast('Reading mood board…');
-  try {
-    state.mood = await readMoodBoard(f);
-    toast(`Mood board: ${state.mood.images.length} images, ${state.mood.palette.length} colours`);
-    emit('mood');
-  } catch (err) { toast('Could not read PowerPoint: ' + err.message); }
-  e.target.value = '';
-});
-
-function renderMood() {
-  const pal = $('palette'); pal.innerHTML = '';
-  state.mood.palette.forEach((c) => {
-    const s = document.createElement('div');
-    s.className = 'swatch' + (c === activeSwatch ? ' active' : ''); s.style.background = c; s.title = c;
-    s.onclick = () => { activeSwatch = activeSwatch === c ? null : c; renderMood(); };
-    pal.append(s);
-  });
-  const gal = $('moodGallery');
-  if (state.mood.images.length) gal.innerHTML = state.mood.images.map((src) => `<img src="${src}" alt="">`).join('');
+// ---------- inventory gallery: click to add, drag onto the plan ----------
+const invLabel = (p) => itemName({ ...p, invId: p.id });
+function renderGallery() {
+  const q = $('invSearch').value.trim().toLowerCase();
+  $('inventory').innerHTML = INVENTORY.map((p, i) => ({ p, i })).filter(({ p }) => !q || p.name.toLowerCase().includes(q) || invLabel(p).toLowerCase().includes(q))
+    .map(({ p, i }) => `<button class="inv" draggable="true" data-i="${i}" title="${esc(invLabel(p))} · ${p.w}×${p.d}×${p.h} cm"><img src="${p.photo}" alt="" draggable="false">${esc(invLabel(p))}</button>`).join('');
 }
-
-// ---------- furniture ----------
-$('presetSelect').innerHTML = PRESETS.map((p, i) => `<option value="${i}">${p.name}</option>`).join('') + '<option value="custom">Custom item…</option>';
-$('addPreset').addEventListener('click', () => {
-  const v = $('presetSelect').value;
-  addFurniture(v === 'custom' ? { kind: 'custom', name: 'Custom item', w: 100, d: 60, h: 80, seats: 0, color: '#d8cbb8' } : PRESETS[v], 1);
-});
-
-const renderGallery = () => ($('inventory').innerHTML = INVENTORY.map((p, i) => `<button class="inv" data-i="${i}" title="Add to this event (${p.w}×${p.d}×${p.h} cm)"><img src="${p.photo}" alt="">${p.name}</button>`).join(''));
-renderGallery();
+$('invSearch').addEventListener('input', renderGallery);
 document.addEventListener('inventory-changed', renderGallery);
-initInventory(toast);
+const furnitureFor = (inv) => state.furniture.find((f) => f.invId === inv.id) || addFurniture(inv, 0);
+function placeItem(f, x, y) {
+  if (x === undefined) plan.placeAtCenter(f); else plan.placeAt(f, x, y);
+  f.qty = Math.max(f.qty, state.placed.filter((p) => p.itemId === f.id).length);
+  emit('furniture');
+}
 $('inventory').addEventListener('click', (e) => {
   const b = e.target.closest('.inv'); if (!b) return;
-  const p = INVENTORY[b.dataset.i];
-  const existing = state.furniture.find((f) => f.invId === p.id);
-  if (existing) { existing.qty++; emit('furniture'); toast(`${p.name}: ${existing.qty}`); } else addFurniture(p, 1);
+  if (currentView !== 'plan' && currentView !== 'split' && currentView !== '3d') showView('plan');
+  placeItem(furnitureFor(INVENTORY[b.dataset.i]));
 });
+$('inventory').addEventListener('dragstart', (e) => {
+  const b = e.target.closest('.inv'); if (!b) return;
+  e.dataTransfer.setData('text/x-inv', b.dataset.i); e.dataTransfer.effectAllowed = 'copy';
+});
+const canvasEl = $('planCanvas');
+canvasEl.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+canvasEl.addEventListener('drop', (e) => {
+  e.preventDefault();
+  const i = e.dataTransfer.getData('text/x-inv'); if (i === '') return;
+  const w = plan.worldAt(e.clientX, e.clientY);
+  placeItem(furnitureFor(INVENTORY[+i]), w.x, w.y);
+});
+
+$('addPreset').addEventListener('click', () => {
+  const v = $('presetSelect').value;
+  const f = addFurniture(v === 'custom' ? { kind: 'custom', name: 'Custom item', w: 100, d: 60, h: 80, seats: 0, color: '#d8cbb8' } : PRESETS[v], 0);
+  placeItem(f);
+});
+function renderPresets() {
+  $('presetSelect').innerHTML = PRESETS.map((p, i) => `<option value="${i}">${esc(itemName(p))}</option>`).join('') + `<option value="custom">${t('custom')}</option>`;
+}
 
 function renderFurniture() {
   const list = $('furnitureList'); list.innerHTML = '';
   for (const f of state.furniture) {
+    const placed = state.placed.filter((p) => p.itemId === f.id).length;
     const el = document.createElement('div'); el.className = 'fitem';
     el.innerHTML = `
-      ${f.photo ? `<img class="thumb" src="${f.photo}" alt="">` : ''}
-      <button class="color" title="Colour" style="background:${f.color}"></button>
-      <input class="name" value="${f.name.replace(/"/g, '&quot;')}" />
-      <div class="btns"><button data-a="place" title="Place one on the plan">＋</button><button data-a="del" title="Remove">✕</button></div>
-      <div class="dims">
-        <label>W cm<input type="number" data-k="w" value="${f.w}"></label>
-        <label>D cm<input type="number" data-k="d" value="${f.d}"></label>
-        <label>H cm<input type="number" data-k="h" value="${f.h}"></label>
-        <label>Seats<input type="number" data-k="seats" value="${f.seats}"></label>
-        <label>Qty<input type="number" data-k="qty" value="${f.qty}"></label>
-      </div>`;
-    el.querySelector('.name').onchange = (e) => { f.name = e.target.value; emit('furniture'); };
+      ${f.photo ? `<img class="thumb" src="${f.photo}" alt="">` : `<button class="color" title="Colour" style="background:${f.color}"></button>`}
+      <div class="fmeta"><div class="fname">${esc(itemName(f))}</div><div class="hint">${f.w}×${f.d}×${f.h} · ${t('placedOf', { placed, qty: f.qty })}</div></div>
+      <div class="btns">
+        ${f.photo && !f.texture ? `<button class="color sm" title="Colour" style="background:${f.color}"></button>` : ''}
+        <button data-a="place" title="${t('place')}">＋</button><button data-a="del" title="${t('remove')}">✕</button></div>
+      <details class="dims-wrap"><summary>⚙</summary><div class="dims">
+        <label>W<input type="number" data-k="w" value="${f.w}"></label>
+        <label>D<input type="number" data-k="d" value="${f.d}"></label>
+        <label>H<input type="number" data-k="h" value="${f.h}"></label>
+        <label>${t('seat')}<input type="number" data-k="seats" value="${f.seats}"></label>
+        <label>${t('qty')}<input type="number" data-k="qty" value="${f.qty}"></label>
+      </div></details>`;
     el.querySelectorAll('.dims input').forEach((inp) => (inp.onchange = () => { f[inp.dataset.k] = Math.max(0, +inp.value); emit('furniture'); }));
-    el.querySelector('.color').onclick = () => {
-      if (activeSwatch) { f.color = activeSwatch; emit('furniture'); return; }
+    el.querySelectorAll('.color').forEach((b) => (b.onclick = () => {
+      const c = getActiveColor();
+      if (c) { f.color = c; emit('furniture'); return; }
       const picker = document.createElement('input'); picker.type = 'color'; picker.value = f.color;
       picker.oninput = () => { f.color = picker.value; emit('furniture'); }; picker.click();
-    };
-    el.querySelector('[data-a=place]').onclick = () => plan.placeAtCenter(f);
+    }));
+    el.querySelector('[data-a=place]').onclick = () => placeItem(f);
     el.querySelector('[data-a=del]').onclick = () => {
       state.furniture = state.furniture.filter((x) => x !== f);
       state.placed = state.placed.filter((p) => p.itemId !== f.id); emit('furniture');
     };
+    el.addEventListener('click', (e) => { if (e.target.closest('button,input,details')) return; state.selection = state.placed.filter((p) => p.itemId === f.id).map((p) => p.id); emit('select'); });
     list.append(el);
   }
 }
@@ -147,73 +214,119 @@ function renderFurniture() {
 // ---------- inspector ----------
 function renderInspector() {
   const box = $('inspector');
-  const p = state.placed.find((q) => q.id === state.selectedId);
-  if (!p) { box.classList.add('hidden'); return; }
-  const it = state.furniture.find((f) => f.id === p.itemId);
+  const sel = plan.selection();
+  $('alignBar').classList.toggle('hidden', sel.length < 2);
+  if (!sel.length) { box.classList.add('hidden'); return; }
   box.classList.remove('hidden');
-  box.innerHTML = `<strong>${it.name}</strong>
-    <label>X (cm)<input type="number" data-k="x" value="${Math.round(p.x)}"></label>
-    <label>Y (cm)<input type="number" data-k="y" value="${Math.round(p.y)}"></label>
-    <label>Rotation°<input type="number" data-k="rot" step="15" value="${Math.round(p.rot)}"></label>
-    <div class="row"><button data-a="dup">Duplicate</button><button data-a="del">Delete</button></div>`;
-  box.querySelectorAll('input').forEach((inp) => (inp.onchange = () => { p[inp.dataset.k] = +inp.value; emit('placed'); }));
-  box.querySelector('[data-a=dup]').onclick = () => plan.duplicate(p);
-  box.querySelector('[data-a=del]').onclick = () => { state.placed = state.placed.filter((q) => q !== p); state.selectedId = null; emit('placed'); };
+  if (sel.length > 1) {
+    box.innerHTML = `<strong>${t('selectedN', { n: sel.length })}</strong>
+      <div class="row"><button data-a="rl">${t('rotateL')}</button><button data-a="rr">${t('rotateR')}</button></div>
+      <div class="row"><button data-a="dup">${t('duplicate')}</button><button data-a="del" class="danger">${t('delete')}</button></div>`;
+  } else {
+    const p = sel[0], it = itemOf(p);
+    box.innerHTML = `${it.photo ? `<img src="${it.photo}" alt="">` : ''}<strong>${esc(itemName(it))}</strong><span class="hint">${it.w}×${it.d}×${it.h} cm</span>
+      <label>${t('x')}<input type="number" data-k="x" value="${Math.round(p.x)}"></label>
+      <label>${t('y')}<input type="number" data-k="y" value="${Math.round(p.y)}"></label>
+      <label>${t('rotation')}<input type="number" data-k="rot" step="15" value="${Math.round(p.rot)}"></label>
+      <label>${t('label')}<input type="text" data-k="label" value="${esc(p.label || '')}"></label>
+      ${it.seats || ['roundTable', 'rectTable', 'bistro'].includes(it.kind) ? `<label>${t('seat')}<input type="number" data-seats value="${it.seats}" min="0"></label>` : ''}
+      <label class="chk"><input type="checkbox" data-lock ${p.locked ? 'checked' : ''}> ${t('lock')}</label>
+      <div class="row"><button data-a="rl">${t('rotateL')}</button><button data-a="rr">${t('rotateR')}</button></div>
+      <div class="row"><button data-a="dup">${t('duplicate')}</button><button data-a="del" class="danger">${t('delete')}</button></div>`;
+    box.querySelectorAll('input[data-k]').forEach((inp) => (inp.onchange = () => { p[inp.dataset.k] = inp.type === 'number' ? +inp.value : inp.value; emit('placed'); }));
+    const seats = box.querySelector('[data-seats]'); if (seats) seats.onchange = () => { it.seats = Math.max(0, +seats.value); emit('furniture'); };
+    box.querySelector('[data-lock]').onchange = (e) => { p.locked = e.target.checked; emit('placed'); };
+  }
+  box.querySelector('[data-a=rl]').onclick = () => plan.rotateSelection(-15);
+  box.querySelector('[data-a=rr]').onclick = () => plan.rotateSelection(15);
+  box.querySelector('[data-a=dup]').onclick = () => plan.duplicateSelection();
+  box.querySelector('[data-a=del]').onclick = () => plan.deleteSelection();
 }
+document.querySelectorAll('[data-align]').forEach((b) => (b.onclick = () => plan.align(b.dataset.align)));
 
 // ---------- layout / export ----------
 $('autoLayout').addEventListener('click', () => {
+  if (!state.furniture.length) { toast(t('addFirst')); return; }
+  if (!state.venue) { toast(t('needVenue')); return; }
   try {
-    if (!state.furniture.length) { toast('Add furniture to your selection first.'); return; }
     const { missing } = suggestLayout();
     emit('placed');
-    toast(missing ? `Layout suggested — ${missing} table(s) did not fit. Try smaller tables or fewer guests.` : 'Layout suggested ✨ Drag anything to refine it.');
+    toast(missing ? t('layoutMissing', { n: missing }) : t('layoutDone'));
   } catch (err) { toast(err.message); }
 });
-$('clearLayout').addEventListener('click', () => { state.placed = []; state.selectedId = null; emit('placed'); });
+$('clearLayout').addEventListener('click', () => { state.placed = state.placed.filter((p) => p.locked); state.selection = []; emit('placed'); });
 $('exportDxf').addEventListener('click', () => download(`${fileBase()} - plan.dxf`, exportDxf(), 'application/dxf'));
 $('fitView').addEventListener('click', plan.fit);
+$('undoBtn').onclick = () => emit('undo');
+$('redoBtn').onclick = () => emit('redo');
 
 // ---------- 3D ----------
 document.querySelectorAll('[data-cam]').forEach((b) => b.addEventListener('click', () => view3d.setCamera(b.dataset.cam)));
-$('lightMood').addEventListener('change', (e) => view3d.setLighting(e.target.value));
+$('lightMood').addEventListener('change', (e) => { state.mood.light = e.target.value; view3d.setLighting(e.target.value); emit('moodText'); });
 $('renderShot').addEventListener('click', () => view3d.snapshot('render'));
 $('renderAll').addEventListener('click', () => view3d.renderAll());
 
-// ---------- project save / load ----------
-$('eventName').addEventListener('input', (e) => { state.eventName = e.target.value; autosave(); });
-$('saveProject').addEventListener('click', () => { autosave(true); toast('Saved in this browser'); });
-$('exportProject').addEventListener('click', () => download(`${fileBase()}.event.json`, serialize(), 'application/json'));
-$('importProject').addEventListener('change', async (e) => {
-  const f = e.target.files[0]; if (!f) return;
-  try { load(await f.text()); plan.fit(); toast('Project opened'); } catch { toast('That file is not an event project.'); }
-  e.target.value = '';
-});
+// ---------- presentation ----------
+$('buildPresent').onclick = () => buildPresentation();
+$('printPresent').onclick = () => { document.body.classList.add('printing-present'); window.print(); setTimeout(() => document.body.classList.remove('printing-present'), 500); };
+$('presentSuppliers').onchange = () => buildPresentation();
 
-let saveTimer;
-function autosave(now) {
-  clearTimeout(saveTimer);
-  const go = () => { try { localStorage.setItem('rk-event-project', serialize()); } catch { /* storage full or blocked */ } };
-  now ? go() : (saveTimer = setTimeout(go, 800));
+// ---------- language ----------
+$('langToggle').onclick = () => { applyLang(getLang() === 'he' ? 'en' : 'he'); $('saveState').textContent = '✓ ' + t('saved'); refreshAll(); };
+function refreshAll() {
+  renderPresets(); renderGallery(); renderFurniture(); renderMood(); renderStats(); renderInspector(); renderEventSelect(); plan.draw();
+  if (currentView === 'inventory') renderInventory();
+  if (currentView === 'present') buildPresentation();
 }
 
+// ---------- saving ----------
+let saveTimer;
+function autosave() {
+  $('saveState').textContent = t('saving');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try { await saveProject(); $('saveState').textContent = '✓ ' + t('saved'); } catch { $('saveState').textContent = '⚠'; }
+    renderEventSelect();
+  }, 600);
+}
+window.addEventListener('beforeunload', () => { saveProject(); });
+
 // ---------- reactions ----------
+let rebuild3d;
 onChange((reason) => {
-  if (['load', 'venue'].includes(reason)) renderLayers();
-  if (['load', 'mood'].includes(reason)) renderMood();
-  if (['load', 'furniture', 'mood'].includes(reason)) renderFurniture();
-  if (reason === 'load') $('eventName').value = state.eventName;
-  renderInspector();
-  plan.draw();
-  if (currentView === '3d' && reason !== 'move' && reason !== 'select') view3d.rebuild();
-  if (reason !== 'select') autosave();
+  if (reason === 'undo' || reason === 'redo') {
+    if (reason === 'undo' ? undo() : redo()) emit('restored');
+    return;
+  }
+  if (reason === 'load') { renderBrief(); renderLayers(); renderMood(); $('lightMood').value = state.mood.light || 'evening'; }
+  if (reason === 'venue') renderLayers();
+  if (reason === 'mood') renderMood();
+  if (reason === 'furniture' || reason === 'placed') commitHistory();
+  if (['furniture', 'placed', 'mood', 'load', 'restored'].includes(reason)) renderFurniture();
+  $('undoBtn').disabled = !canUndo(); $('redoBtn').disabled = !canRedo();
+  if (reason !== 'move') renderInspector();
+  if (reason !== 'moodText') { plan.draw(); if (reason !== 'move') renderStats(); }
+  if (show3d()) {
+    if (reason === 'move' || reason === 'select') view3d.sync();
+    else if (['placed', 'furniture', 'venue', 'mood', 'load', 'restored'].includes(reason)) { clearTimeout(rebuild3d); rebuild3d = setTimeout(() => view3d.rebuild(), 120); }
+  }
+  if (reason !== 'select' && reason !== 'move') autosave();
 });
+onChange((reason) => { if (reason === 'select') renderSidebarPalette(); });
 
 window.addEventListener('resize', () => { plan.resize(); view3d.resize(); });
 
-try {
-  const saved = localStorage.getItem('rk-event-project');
-  if (saved) load(saved); else emit('load');
-} catch { emit('load'); }
-plan.resize();
-plan.fit();
+// ---------- start ----------
+applyLang();
+renderPresets();
+renderGallery();
+initInventory(toast);
+initMood(toast);
+(async () => {
+  const ok = await restoreLastProject().catch(() => false);
+  if (!ok) newProject(t('newEventName'));
+  await saveProject().catch(() => {});
+  renderEventSelect();
+  plan.resize();
+  plan.fit();
+})();

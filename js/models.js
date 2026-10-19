@@ -70,7 +70,7 @@ function hurricane(h) {
 export function buildItem(it, { chairs = true } = {}) {
   const g = new THREE.Group();
   const w = it.w * M, d = it.d * M, h = it.h * M, c = it.color;
-  const accent = state.mood.palette[1] || '#c8a46a';
+  const accent = state.mood.roles?.florals || state.mood.palette[1] || '#c8a46a';
   switch (it.kind) {
     case 'roundTable': {
       g.add(mesh(new THREE.CylinderGeometry(w / 2 + 0.02, w / 2 + 0.15, h, 48, 1, true), mat(c, { side: THREE.DoubleSide, roughness: 0.9 }), 0, h / 2, 0));
@@ -231,7 +231,7 @@ export function buildItem(it, { chairs = true } = {}) {
       g.add(mesh(new THREE.BoxGeometry(w, h, d), mat(c), 0, h / 2, 0));
   }
   if (chairs) for (const ch of chairPositions(it)) {
-    const cm = chair(state.mood.palette[2] || '#e8e0d4');
+    const cm = chair(state.mood.roles?.chairs || state.mood.palette[2] || '#e8e0d4');
     cm.position.set(ch.x * M, 0, -ch.y * M);
     cm.rotation.y = ch.a + Math.PI;
     g.add(cm);

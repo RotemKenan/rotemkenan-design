@@ -1,6 +1,20 @@
-# Rotem Kenan · Event Studio
+# Event Studio · by Rotem Kenan
+*See the event before the first guest walks in.*
 
-A personal web app for planning weddings and private events — no AutoCAD needed.
+A personal design tool for weddings and private events — mood board → floor plan → 3D → client presentation.
+English / עברית switch in the top bar (Hebrew is fully right-to-left).
+
+**Workflow:** create an event (top bar ＋, switch between events any time) → fill the event details →
+build the mood (upload a PowerPoint or photos, or start from a mood template; edit the palette and choose where each colour goes;
+*Apply mood*) → load the venue DXF → drag pieces from your inventory onto the plan or *Suggest a layout* →
+fine-tune in **2D**, **3D** or side-by-side **2D + 3D** (moving in one moves the other) → **Presentation** → Print / save PDF for the client.
+
+**Plan editing:** drag to move · ↻ knob or R to rotate · Shift+click / Shift+drag to select several · align & spread tools ·
+Ctrl+D duplicate · Ctrl+C / Ctrl+V · Del · Ctrl+Z / Ctrl+Shift+Z · arrows nudge (Shift = 50 cm) · lock a piece · label tables ·
+distance to the nearest wall while dragging · overlapping pieces turn red · seat count vs guests and stock warnings.
+In 3D, click a piece to select it and drag it on the floor.
+
+Events are saved automatically in the browser (IndexedDB). Use *⋯ → Export event file* to back up or move an event to another computer.
 
 1. **Venue plan** – upload the venue drawing as **DXF** (or try the demo hall). Choose which layers to show.
    *DWG is a closed Autodesk format that browsers can't read directly — open it in AutoCAD / DWG TrueView /

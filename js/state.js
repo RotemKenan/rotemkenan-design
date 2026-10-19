@@ -46,7 +46,7 @@ const DEFAULT_INVENTORY = [
   { id: 'pouf-acanthus', kind: 'pouf', shape: 'round', name: 'Fringed pouf, acanthus velvet', w: 50, d: 50, h: 45, seatH: 45, color: '#ffffff', finish: 'velvet', texture: 'assets/textures/pouf-acanthus.jpg', trim: '#a8452e' },
   { id: 'pouf-rust', kind: 'pouf', shape: 'round', name: 'Fringed pouf, plain rust velvet', w: 50, d: 50, h: 45, seatH: 45, color: '#9a2e14', finish: 'velvet', trim: '#a8452e' },
   { id: 'cushion-fringe', kind: 'cushion', name: 'Fringed velvet cushion, ochre print', w: 50, d: 15, h: 50, seatH: 0, color: '#ffffff', finish: 'velvet', texture: 'assets/textures/cushion-fringe.jpg', trim: '#8a6a2a', notes: 'Decor — usually placed on sofas' },
-].map((it) => ({ seats: 0, measured: false, supplier: '', sku: '', notes: '', stock: 1, known: [], ...it, photo: I(it.id) }));
+].map((it) => ({ seats: 0, measured: false, supplier: '', sku: '', notes: '', stock: null, known: [], ...it, photo: I(it.id) }));
 
 const INV_KEY = 'rk-inventory';
 export const INVENTORY = (() => {
@@ -69,16 +69,19 @@ export function saveInventory() {
 export const isRound = (it) => it.shape === 'round' || ['roundTable', 'cocktail', 'plant'].includes(it.kind);
 
 let uid = Date.now() % 100000;
-export const newId = (p = 'id') => `${p}${(uid++).toString(36)}`;
+export const newId = (p = 'id') => `${p}${(uid++).toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-export const state = {
-  eventName: '',
-  venue: null,        // { segments:[{x1,y1,x2,y2,layer}], layers:{name:bool}, bounds, unitsScale, wallHeight }
-  mood: { palette: [], images: [] },
-  furniture: [],      // catalog entries: {id, kind, name, w, d, h, seats, color, qty}
-  placed: [],         // {id, itemId, x, y, rot}
-  selectedId: null,
-};
+export const blankMood = () => ({
+  name: '', keywords: [], notes: '', images: [], palette: [],
+  roles: { walls: '', floor: '', linen: '', chairs: '', accent: '', florals: '' }, light: 'evening',
+});
+const blankProject = () => ({
+  id: newId('ev'), eventName: '', updated: Date.now(),
+  brief: { client: '', type: 'wedding', date: '', guests: 0, venueName: '', notes: '' },
+  venue: null, mood: blankMood(), furniture: [], placed: [],
+});
+
+export const state = { ...blankProject(), selection: [], selectedId: null };
 
 const listeners = new Set();
 export const onChange = (fn) => listeners.add(fn);
@@ -86,15 +89,60 @@ export function emit(reason) { listeners.forEach((fn) => fn(reason)); }
 
 export const itemOf = (p) => state.furniture.find((f) => f.id === p.itemId);
 
-export function serialize() {
-  return JSON.stringify({ ...state, selectedId: null, version: 1 });
-}
+const PERSISTED = ['id', 'eventName', 'updated', 'brief', 'venue', 'mood', 'furniture', 'placed'];
+export const snapshot = () => Object.fromEntries(PERSISTED.map((k) => [k, state[k]]));
+export const serialize = () => JSON.stringify({ ...snapshot(), version: 2 });
 
 export function load(json) {
   const data = typeof json === 'string' ? JSON.parse(json) : json;
-  Object.assign(state, { eventName: '', venue: null, mood: { palette: [], images: [] }, furniture: [], placed: [] }, data);
-  state.selectedId = null;
+  const base = blankProject();
+  Object.assign(state, base, data, { selection: [], selectedId: null });
+  state.mood = { ...blankMood(), ...(data.mood || {}), roles: { ...blankMood().roles, ...(data.mood?.roles || {}) } };
+  state.brief = { ...base.brief, ...(data.brief || {}) };
+  history.length = 0; future.length = 0; lastSnap = JSON.stringify([state.furniture, state.placed]);
   emit('load');
+}
+export const newProject = (name = '') => load({ ...blankProject(), eventName: name });
+
+// ---------- undo / redo (furniture + placement) ----------
+const history = [], future = [];
+let lastSnap = '[[],[]]';
+export function commitHistory() {
+  const now = JSON.stringify([state.furniture, state.placed]);
+  if (now === lastSnap) return;
+  history.push(lastSnap); if (history.length > 80) history.shift();
+  future.length = 0; lastSnap = now;
+}
+function restore(snap) { [state.furniture, state.placed] = JSON.parse(snap); lastSnap = snap; state.selection = state.selection.filter((id) => state.placed.some((p) => p.id === id)); }
+export function undo() { if (!history.length) return false; future.push(lastSnap); restore(history.pop()); return true; }
+export function redo() { if (!future.length) return false; history.push(lastSnap); restore(future.pop()); return true; }
+export const canUndo = () => history.length > 0;
+export const canRedo = () => future.length > 0;
+
+// ---------- projects: IndexedDB (mood images make projects too big for localStorage) ----------
+const DB = 'rk-event-studio', STORE = 'projects';
+function db() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB, 1);
+    r.onupgradeneeded = () => r.result.createObjectStore(STORE, { keyPath: 'id' });
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function tx(mode, fn) {
+  const d = await db();
+  return new Promise((res, rej) => { const t = d.transaction(STORE, mode); const out = fn(t.objectStore(STORE)); t.oncomplete = () => res(out?.result ?? out); t.onerror = () => rej(t.error); });
+}
+export async function saveProject() { state.updated = Date.now(); const snap = JSON.parse(serialize()); await tx('readwrite', (s) => s.put(snap)); try { localStorage.setItem('rk-current', state.id); } catch { /* ignore */ } }
+export async function listProjects() { const all = await tx('readonly', (s) => s.getAll()); return (all || []).sort((a, b) => b.updated - a.updated); }
+export async function openProject(id) { const all = await listProjects(); const p = all.find((x) => x.id === id); if (p) load(p); return !!p; }
+export async function deleteProject(id) { await tx('readwrite', (s) => s.delete(id)); }
+export async function restoreLastProject() {
+  let cur = null; try { cur = localStorage.getItem('rk-current'); } catch { /* ignore */ }
+  const all = await listProjects().catch(() => []);
+  const p = all.find((x) => x.id === cur) || all[0];
+  if (p) { load(p); return true; }
+  try { const old = localStorage.getItem('rk-event-project'); if (old) { load({ ...JSON.parse(old), id: newId('ev') }); return true; } } catch { /* ignore */ }
+  return false;
 }
 
 export function addFurniture(preset, qty = 1) {

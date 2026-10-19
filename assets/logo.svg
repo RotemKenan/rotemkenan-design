@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Event Studio by Rotem Kenan">
+  <!-- An open arch (venue doorway / chuppah) framing a single candle flame: the moment a guest first walks in. -->
+  <rect width="64" height="64" rx="14" fill="#1b1918"/>
+  <path d="M17 50 V30 a15 15 0 0 1 30 0 V50" fill="none" stroke="#e9dfcf" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M22 50 V31 a10 10 0 0 1 20 0 V50" fill="none" stroke="#b5532c" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M32 27 c-3.2 4 -3.6 7.2 0 9.6 c3.6 -2.4 3.2 -5.6 0 -9.6z" fill="#e8a24a"/>
+  <rect x="30.4" y="37" width="3.2" height="8" rx="1" fill="#e9dfcf"/>
+  <path d="M13 50 H51" stroke="#e9dfcf" stroke-width="2.6" stroke-linecap="round"/>
+</svg>

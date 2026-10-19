@@ -24,7 +24,7 @@ export async function readMoodBoard(file) {
   return { images, palette };
 }
 
-function blobToDataUrl(blob, maxSize) {
+export function blobToDataUrl(blob, maxSize) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -40,7 +40,7 @@ function blobToDataUrl(blob, maxSize) {
 }
 
 // Simple k-means over sampled pixels of all mood images.
-async function paletteFromImages(urls, k = 8) {
+export async function paletteFromImages(urls, k = 8) {
   const px = [];
   for (const url of urls) {
     const img = await new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.src = url; });
@@ -66,7 +66,7 @@ async function paletteFromImages(urls, k = 8) {
     .map(({ c }) => '#' + c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join(''));
 }
 
-function dedupe(colors) {
+export function dedupe(colors) {
   const out = [];
   const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
   for (const c of colors) {

@@ -8,6 +8,7 @@ import { INVENTORY, saveInventory, emit } from './state.js';
 import { buildItem } from './models.js';
 import { itemDxf, itemOutline } from './dxf.js';
 import { TEXTURE_TYPES, texturesReady } from './textures.js';
+import { itemName } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 let selected = INVENTORY[0];
@@ -31,19 +32,20 @@ export function renderInventory() {
       : '–';
     tr.innerHTML = `
       <td><img src="${it.photo}" alt=""></td>
-      <td><input class="txt" data-k="name" value="${it.name.replace(/"/g, '&quot;')}" style="width:170px"></td>
+      <td><input class="txt" data-k="name" value="${itemName({ ...it, invId: it.id }).replace(/"/g, '&quot;')}" style="width:170px"></td>
       <td>${num('w')}</td><td>${num('d')}</td><td>${num('h')}</td>
       <td>${num('seatH', it.seatH > 0 || ['club', 'slipper', 'channelSofa', 'curvedSofa'].includes(it.kind))}</td>
       <td>${num('innerW', it.kind === 'curvedSofa')}</td>
       <td><select data-k="finish">${TEXTURE_TYPES.map((t) => `<option ${t === it.finish ? 'selected' : ''}>${t}</option>`).join('')}</select>
           <input type="color" data-k="color" value="${it.color}" title="Colour"></td>
-      <td><input type="number" data-k="stock" value="${it.stock}" min="0"></td>
+      <td><input type="number" data-k="stock" value="${it.stock ?? ''}" min="0" placeholder="?"></td>
       <td><input class="txt" data-k="supplier" value="${it.supplier || ''}" placeholder="Supplier"><br><input class="txt" data-k="sku" value="${it.sku || ''}" placeholder="SKU"></td>
       <td><input type="checkbox" data-k="measured" ${it.measured ? 'checked' : ''}></td>
       <td class="files"><button data-a="glb" title="3D model with textures">GLB</button><button data-a="dxf" title="Top-view block for AutoCAD">DXF</button></td>`;
     tr.addEventListener('click', (e) => { if (e.target.closest('input,select,button')) return; select(it); });
     tr.querySelectorAll('[data-k]').forEach((inp) => inp.addEventListener('change', () => {
       const k = inp.dataset.k;
+      if (k === 'name') it.nameEdited = true;
       it[k] = inp.type === 'checkbox' ? inp.checked : inp.type === 'number' ? Math.max(0, +inp.value) : inp.value;
       saveInventory(); emit('furniture');
       if (k === 'measured') renderInventory();
@@ -89,7 +91,7 @@ export function showPreview() {
   const dist = size * 1.5 + 0.8;
   camera.position.set(dist * 0.55, dist * 0.5, dist * 0.75);
   controls.target.set(0, selected.h / 200, 0);
-  $('invPreviewInfo').innerHTML = `<strong>${selected.name}</strong> · ${selected.w} × ${selected.d} × H ${selected.h} cm
+  $('invPreviewInfo').innerHTML = `<strong>${itemName({ ...selected, invId: selected.id })}</strong> · ${selected.w} × ${selected.d} × H ${selected.h} cm
     ${selected.measured ? '<span style="color:#3d7a4f"> ✓ measured</span>' : '<span style="color:#b0602a"> · estimate</span>'}
     ${topViewSvg(selected)}<p class="hint">Top view = the DXF block. Back of seats is at the top; base point = centre.</p>`;
 }
@@ -145,7 +147,7 @@ function printSheet() {
     <table><tr><th>Photo</th><th>Piece</th><th>W</th><th>D</th><th>H</th><th>Seat H</th><th>Inner Ø</th><th>Qty in stock</th><th>Notes</th></tr>
     ${INVENTORY.map((it) => `<tr><td><img src="${it.photo}"></td><td>${it.name}</td>
       <td class="box">(${it.w})</td><td class="box">(${it.d})</td><td class="box">(${it.h})</td><td class="box">${it.seatH ? `(${it.seatH})` : ''}</td>
-      <td class="box">${it.kind === 'curvedSofa' ? `(${it.innerW})` : '—'}</td><td class="box">(${it.stock})</td><td style="width:22%"></td></tr>`).join('')}
+      <td class="box">${it.kind === 'curvedSofa' ? `(${it.innerW})` : '—'}</td><td class="box">${it.stock ?? ''}</td><td style="width:22%"></td></tr>`).join('')}
     </table>`;
   window.print();
 }
