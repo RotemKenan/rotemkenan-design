@@ -380,7 +380,7 @@ onChange((reason) => {
     if (reason === 'undo' ? undo() : redo()) emit('restored');
     return;
   }
-  if (reason === 'load') { renderBrief(); renderLayers(); renderMood(); $('lightMood').value = state.mood.light || 'evening'; }
+  if (reason === 'load') { saveInventory(); /* event copies pick up corrected inventory sizes */ renderBrief(); renderLayers(); renderMood(); $('lightMood').value = state.mood.light || 'evening'; }
   if (reason === 'venue') renderLayers();
   if (reason === 'mood') renderMood();
   if (reason === 'furniture' || reason === 'placed') commitHistory();

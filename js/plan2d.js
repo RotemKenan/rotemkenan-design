@@ -132,7 +132,9 @@ function drawItem(p, it, selected, clash) {
 
 // Curved sofa: arc band, outer Ø = w, inner Ø = innerW. Like every seat, the back is at +y and it faces -y.
 export function curvedGeom(it) {
-  const R = it.w / 2, r = Math.min(R - 20, (it.innerW || it.w - 110) / 2), span = Math.PI / 3;
+  const R = it.w / 2, r = Math.min(R - 20, (it.innerW || it.w - 110) / 2);
+  // How far the arc wraps follows the real depth: depth = R − r·cos(span) (outer back to the tips of the inner arc).
+  const span = Math.acos(Math.max(-0.2, Math.min(0.95, (R - (it.d || R)) / r)));
   return { R, r, a0: Math.PI / 2 - span, a1: Math.PI / 2 + span, cy: it.d / 2 - R };
 }
 function curvedPath(c, it, k) {

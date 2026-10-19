@@ -30,16 +30,17 @@ const DEFAULT_INVENTORY = [
   { id: 'bistro-candle', kind: 'bistro', shape: 'round', cloth: '#ece5d8', candle: true, name: 'Bistro + linen & hurricane', w: 70, d: 70, h: 75, seatH: 0, seats: 2, color: '#1b1918', finish: 'lacquer' },
   { id: 'club-leather', kind: 'club', name: 'Vintage leather armchair', w: 80, d: 85, h: 90, seatH: 45, color: '#7a4526', finish: 'leather', supplier: 'Harmonia', sku: '3451' },
   { id: 'channel-sofa', kind: 'channelSofa', name: 'Channel velvet sofa, chocolate', w: 200, d: 73, h: 80, seatH: 45, color: '#3b2419', finish: 'velvet', supplier: 'Sugoy Design', known: ['d', 'h'] },
-  { id: 'curved-green', kind: 'curvedSofa', name: 'Curved velvet sofa, green', w: 346, d: 120, h: 80, seatH: 45, color: '#1f5a3c', finish: 'velvet', supplier: 'Sugoy Design', innerW: 200, notes: 'Outer arc Ø346, inner arc Ø200 (supplier)', known: ['w', 'innerW'] },
-  { id: 'curved-rust', kind: 'curvedSofa', name: 'Curved velvet sofa, rust', w: 346, d: 120, h: 80, seatH: 45, color: '#8a3f22', finish: 'velvet', supplier: 'Sugoy Design', innerW: 200, notes: 'Outer arc Ø346, inner arc Ø200 (supplier)', known: ['w', 'innerW'] },
+  { id: 'curved-green', kind: 'curvedSofa', name: 'Curved velvet sofa, green', w: 346, d: 150, h: 87, seatH: 48, innerW: 200, color: '#1f5a3c', finish: 'velvet', supplier: 'Sugoy Design', notes: 'Supplier: outer arc Ø3.46 m, inner Ø2.00 m, length 3.30 m, seat width 78 cm', known: ['w', 'd', 'h', 'seatH', 'innerW'] },
+  { id: 'curved-rust', kind: 'curvedSofa', name: 'Curved velvet sofa, rust', w: 346, d: 150, h: 87, seatH: 48, innerW: 200, color: '#8a3f22', finish: 'velvet', supplier: 'Sugoy Design', notes: 'Supplier: outer arc Ø3.46 m, inner Ø2.00 m, length 3.30 m, seat width 78 cm', known: ['w', 'd', 'h', 'seatH', 'innerW'] },
   { id: 'slipper-rust', kind: 'slipper', name: 'Velvet slipper chair, rust', w: 60, d: 70, h: 80, seatH: 45, color: '#7e3a1f', finish: 'velvet', supplier: 'Sugoy Design' },
   { id: 'slipper-green', kind: 'slipper', name: 'Velvet slipper chair, green', w: 60, d: 70, h: 80, seatH: 45, color: '#5f7744', finish: 'velvet', supplier: 'Sugoy Design' },
   { id: 'channel-chair-green', kind: 'channelSofa', name: 'Channel velvet armchair, olive', w: 80, d: 75, h: 75, seatH: 45, color: '#4d5e33', finish: 'velvet' },
   { id: 'bench-burgundy', kind: 'bench', name: 'Armless velvet bench sofa, burgundy', w: 160, d: 70, h: 85, seatH: 45, color: '#6e1020', finish: 'velvet' },
   { id: 'armchair-navy', kind: 'loungeChair', name: 'Navy velvet armchair, black steel frame', w: 70, d: 75, h: 95, seatH: 45, color: '#25365a', finish: 'velvet' },
   { id: 'slipper-teal', kind: 'slipper', name: 'Velvet slipper chair, teal', w: 60, d: 70, h: 80, seatH: 45, color: '#3f7a72', finish: 'velvet', supplier: 'Sugoy Design' },
-  { id: 'curved-navy', kind: 'curvedSofa', name: 'Curved velvet sofa, navy', w: 346, d: 120, h: 80, seatH: 45, innerW: 200, color: '#1c2a52', finish: 'velvet', supplier: 'Sugoy Design', notes: 'Same model as green / rust: outer arc Ø346, inner Ø200', known: ['w', 'innerW'] },
-  { id: 'curved-brown', kind: 'curvedSofa', name: 'Curved velvet sofa, chocolate', w: 346, d: 120, h: 80, seatH: 45, innerW: 200, color: '#4a2716', finish: 'velvet', supplier: 'Sugoy Design', notes: 'Same model as green / rust: outer arc Ø346, inner Ø200', known: ['w', 'innerW'] },
+  { id: 'curved-navy', kind: 'curvedSofa', name: 'Curved velvet sofa, navy', w: 346, d: 150, h: 87, seatH: 48, innerW: 200, color: '#1c2a52', finish: 'velvet', supplier: 'Sugoy Design', notes: 'Supplier: outer arc Ø3.46 m, inner Ø2.00 m, length 3.30 m, seat width 78 cm', known: ['w', 'd', 'h', 'seatH', 'innerW'] },
+  { id: 'curved-brown', kind: 'curvedSofa', name: 'Curved velvet sofa, chocolate', w: 346, d: 150, h: 87, seatH: 48, innerW: 200, color: '#4a2716', finish: 'velvet', supplier: 'Sugoy Design', notes: 'Supplier: outer arc Ø3.46 m, inner Ø2.00 m, length 3.30 m, seat width 78 cm', known: ['w', 'd', 'h', 'seatH', 'innerW'] },
+  { id: 'curved-burgundy', kind: 'curvedSofa', name: 'Curved velvet sofa, burgundy', w: 346, d: 150, h: 87, seatH: 48, innerW: 200, color: '#6a1426', finish: 'velvet', supplier: 'Sugoy Design', stock: 16, measured: true, notes: 'Supplier: outer arc Ø3.46 m, inner Ø2.00 m, length 3.30 m, seat width 78 cm, 16 in stock', known: ['w', 'd', 'h', 'seatH', 'innerW'] },
   { id: 'pouf-damask', kind: 'pouf', shape: 'round', name: 'Fringed pouf, gothic damask velvet', w: 50, d: 50, h: 45, seatH: 45, color: '#ffffff', finish: 'velvet', texture: 'assets/textures/pouf-damask.jpg', trim: '#a8402e' },
   { id: 'pouf-tiger', kind: 'pouf', shape: 'round', name: 'Fringed pouf, tiger velvet', w: 50, d: 50, h: 45, seatH: 45, color: '#ffffff', finish: 'velvet', texture: 'assets/textures/pouf-tiger.jpg', trim: '#8f2a22' },
   { id: 'pouf-ikat', kind: 'pouf', shape: 'round', name: 'Fringed pouf, wine ikat velvet', w: 50, d: 50, h: 45, seatH: 45, color: '#ffffff', finish: 'velvet', texture: 'assets/textures/pouf-ikat.jpg', trim: '#9a3226' },
@@ -48,21 +49,27 @@ const DEFAULT_INVENTORY = [
   { id: 'cushion-fringe', kind: 'cushion', name: 'Fringed velvet cushion, ochre print', w: 50, d: 15, h: 50, seatH: 0, color: '#ffffff', finish: 'velvet', texture: 'assets/textures/cushion-fringe.jpg', trim: '#8a6a2a', notes: 'Decor — usually placed on sofas' },
 ].map((it) => ({ seats: 0, measured: false, supplier: '', sku: '', notes: '', stock: null, known: [], ...it, photo: I(it.id) }));
 
-const INV_KEY = 'rk-inventory';
+const INV_KEY = 'rk-inventory', INV_VERSION = 2;
 export const INVENTORY = (() => {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(INV_KEY) || '{}'); } catch { /* private mode */ }
-  const list = DEFAULT_INVENTORY.map((d) => ({ ...d, ...(saved[d.id] || {}) }));
-  for (const [id, it] of Object.entries(saved)) if (!list.some((d) => d.id === id)) list.push(it); // pieces added later
+  // Sizes confirmed by a supplier (the `known` fields) replace older saved estimates once per data update.
+  const fresh = saved.__v !== INV_VERSION;
+  const list = DEFAULT_INVENTORY.map((d) => {
+    const mine = { ...(saved[d.id] || {}) };
+    if (fresh) for (const k of d.known || []) delete mine[k];
+    return { ...d, ...mine, known: d.known };
+  });
+  for (const [id, it] of Object.entries(saved)) if (id !== '__v' && !list.some((d) => d.id === id)) list.push(it); // pieces added later
   return list;
 })();
 
 export function saveInventory() {
-  try { localStorage.setItem(INV_KEY, JSON.stringify(Object.fromEntries(INVENTORY.map((it) => [it.id, it])))); } catch { /* storage blocked */ }
+  try { localStorage.setItem(INV_KEY, JSON.stringify({ __v: INV_VERSION, ...Object.fromEntries(INVENTORY.map((it) => [it.id, it])) })); } catch { /* storage blocked */ }
   // keep event furniture copies in sync with the measured sizes
   for (const f of state.furniture) {
     const src = INVENTORY.find((it) => it.id === f.invId);
-    if (src) Object.assign(f, { w: src.w, d: src.d, h: src.h, seatH: src.seatH, color: src.color, finish: src.finish, name: src.name });
+    if (src) Object.assign(f, { innerW: src.innerW, w: src.w, d: src.d, h: src.h, seatH: src.seatH, color: src.color, finish: src.finish, name: src.name });
   }
 }
 
