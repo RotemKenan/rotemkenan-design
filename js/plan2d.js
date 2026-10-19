@@ -177,6 +177,10 @@ function drawOverlay() {
     pts.forEach((q) => { ctx.beginPath(); ctx.arc(q.x, q.y, 6, 0, Math.PI * 2); ctx.fill(); });
     if (calibHover && pts.length === 1) { ctx.setLineDash([6, 4]); ctx.strokeRect(pts[0].x, pts[0].y, calibHover.x - pts[0].x, calibHover.y - pts[0].y); ctx.setLineDash([]); }
   }
+  if (magnetLine && drag) {
+    const it = itemOf(magnetLine);
+    if (it) { ctx.save(); const c = toScreen(magnetLine.x, magnetLine.y); ctx.translate(c.x, c.y); ctx.rotate((-magnetLine.rot * Math.PI) / 180); ctx.strokeStyle = '#2f6f8f'; ctx.lineWidth = 2; ctx.setLineDash([5, 3]); ctx.strokeRect((-it.w / 2) * view.scale - 3, (-it.d / 2) * view.scale - 3, it.w * view.scale + 6, it.d * view.scale + 6); ctx.restore(); }
+  }
   if (marquee) {
     const a = toScreen(marquee.x0, marquee.y0), b = toScreen(marquee.x1, marquee.y1);
     ctx.fillStyle = 'rgba(176,122,62,.08)'; ctx.strokeStyle = '#b07a3e'; ctx.setLineDash([5, 4]);
@@ -293,7 +297,36 @@ function rotateHandle(p, it) { // screen position of the rotate knob above the s
   return { x: c.x - Math.sin(a) * dist, y: c.y - Math.cos(a) * dist };
 }
 
-let hover = null, marquee = null, live = null;
+let hover = null, marquee = null, live = null, magnetLine = null;
+
+// Finds where piece p (item it) should click onto the nearest other piece: squared to its angle,
+// touching one of its sides, centred or flush with an end. Returns { x, y, rot, line } or null.
+const MAGNET = 30; // cm
+function magnet(p, it, skip) {
+  let best = null;
+  for (const q of state.placed) {
+    if (skip.has(q.id)) continue;
+    const iq = itemOf(q); if (!iq || iq.kind === 'danceFloor' || iq.kind === 'curvedSofa') continue;
+    if (Math.hypot(p.x - q.x, p.y - q.y) > (Math.max(it.w, it.d) + Math.max(iq.w, iq.d)) / 2 + MAGNET) continue;
+    const turns = Math.round((p.rot - q.rot) / 90);
+    const rot = ((q.rot + turns * 90) % 360 + 360) % 360, odd = Math.abs(turns) % 2 === 1;
+    const pw = odd ? it.d : it.w, pd = odd ? it.w : it.d, qa = (-q.rot * Math.PI) / 180;
+    const lx = (p.x - q.x) * Math.cos(qa) - (p.y - q.y) * Math.sin(qa), ly = (p.x - q.x) * Math.sin(qa) + (p.y - q.y) * Math.cos(qa);
+    const sideX = (iq.w + pw) / 2, sideY = (iq.d + pd) / 2;
+    const alignY = [0, (iq.d - pd) / 2, -(iq.d - pd) / 2], alignX = [0, (iq.w - pw) / 2, -(iq.w - pw) / 2];
+    const near = (v, opts) => opts.reduce((b, o) => (Math.abs(v - o) < Math.abs(v - b) ? o : b), opts[0]);
+    const cands = [];
+    for (const sx of [sideX, -sideX]) { const ay = near(ly, alignY); cands.push({ lx: sx, ly: Math.abs(ly - ay) < MAGNET ? ay : ly }); }
+    for (const sy of [sideY, -sideY]) { const ax = near(lx, alignX); cands.push({ lx: Math.abs(lx - ax) < MAGNET ? ax : lx, ly: sy }); }
+    for (const c of cands) {
+      const dist = Math.hypot(c.lx - lx, c.ly - ly);
+      if (dist > MAGNET || (best && dist >= best.dist)) continue;
+      const a = (q.rot * Math.PI) / 180;
+      best = { dist, rot, x: q.x + c.lx * Math.cos(a) - c.ly * Math.sin(a), y: q.y + c.lx * Math.sin(a) + c.ly * Math.cos(a), line: q };
+    }
+  }
+  return best;
+}
 
 // Room calibration: the user taps two points on the plan; cb receives both points (world cm).
 let calib = null, calibHover = null;
@@ -358,7 +391,7 @@ canvas.addEventListener('pointerdown', (e) => {
     if (e.shiftKey || e.ctrlKey || e.metaKey) setSelection(state.selection.includes(p.id) ? state.selection.filter((i) => i !== p.id) : [...state.selection, p.id]);
     else if (!state.selection.includes(p.id)) setSelection([p.id]);
     if (p.locked) { drag = null; return; }
-    drag = { mode: 'move', start: w, items: selection().filter((q) => !q.locked).map((q) => ({ q, x: q.x, y: q.y })) };
+    drag = { mode: 'move', start: w, lead: p, items: selection().filter((q) => !q.locked).map((q) => ({ q, x: q.x, y: q.y, rot: q.rot })) };
   } else if (e.shiftKey) {
     marquee = { x0: w.x, y0: w.y, x1: w.x, y1: w.y }; drag = { mode: 'marquee' };
   } else {
@@ -386,7 +419,22 @@ canvas.addEventListener('pointermove', (e) => {
     emit('move'); return;
   }
   const dx = w.x - drag.start.x, dy = w.y - drag.start.y;
-  for (const o of drag.items) { o.q.x = snap(o.x + dx); o.q.y = snap(o.y + dy); }
+  for (const o of drag.items) { o.q.x = snap(o.x + dx); o.q.y = snap(o.y + dy); o.q.rot = o.rot; }
+  // Magnet: the piece under the pointer clicks onto a neighbour (same angle, edge to edge, aligned); the group follows.
+  magnetLine = null;
+  const lead = drag.items.find((o) => o.q === drag.lead);
+  if (lead && document.getElementById('magnetToggle')?.checked) {
+    const m = magnet(lead.q, itemOf(lead.q), new Set(drag.items.map((o) => o.q.id)));
+    if (m) {
+      const ddx = m.x - lead.q.x, ddy = m.y - lead.q.y, dr = m.rot - lead.q.rot, a = (dr * Math.PI) / 180;
+      for (const o of drag.items) {
+        const rx = o.q.x - lead.q.x, ry = o.q.y - lead.q.y;
+        o.q.x = lead.q.x + ddx + rx * Math.cos(a) - ry * Math.sin(a); o.q.y = lead.q.y + ddy + rx * Math.sin(a) + ry * Math.cos(a);
+        o.q.rot = (o.q.rot + dr + 360) % 360;
+      }
+      magnetLine = m.line;
+    }
+  }
   live = drag.items.length === 1 ? drag.items[0].q : null;
   emit('move');
 });
@@ -397,7 +445,7 @@ canvas.addEventListener('pointerup', () => {
     marquee = null;
   }
   if (drag?.mode === 'move' || drag?.mode === 'rotate') emit('placed');
-  drag = null; live = null; canvas.style.cursor = 'grab'; draw();
+  drag = null; live = null; magnetLine = null; canvas.style.cursor = 'grab'; draw();
 });
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
