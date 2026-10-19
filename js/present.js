@@ -46,6 +46,8 @@ export function buildPresentation() {
 
     ${planImg ? `<section class="p-page"><h2>${esc(t('pPlan'))}</h2><img class="p-plan" src="${planImg}" alt=""></section>` : ''}
 
+    ${(state.renders || []).length ? `<section class="p-page"><h2>${esc(t('pRenders'))}</h2><div class="p-renders">${state.renders.map((u) => `<img src="${u}" alt="">`).join('')}</div></section>` : ''}
+
     ${views.length ? `<section class="p-page"><h2>${esc(t('pViews'))}</h2><div class="p-views">${views.map((v) => `<img src="${v.url}" alt="">`).join('')}</div></section>` : ''}
 
     ${counts.length ? `<section class="p-page"><h2>${esc(t('pFurniture'))}</h2>

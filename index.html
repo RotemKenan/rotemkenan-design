@@ -160,7 +160,12 @@
           <button data-cam="stage" data-i18n="camStage">From stage</button>
           <button data-cam="corner" data-i18n="camCorner">Corner</button>
           <button data-cam="top" data-i18n="camTop">Top</button>
-          <button data-cam="walk" data-i18n="camWalk">Eye level</button>
+          <button data-cam="walk" data-i18n="camWalk">🚶 Eye level</button>
+          <span id="walkTools" class="walk-tools hidden">
+            <button id="walkSnap" data-i18n="walkSnap">📸 Snapshot</button>
+            <button id="walkBeauty" class="primary" data-i18n="walkBeauty">✨ Beauty render</button>
+            <button id="walkExit" data-i18n="walkExit">Exit walk</button>
+          </span>
           <select id="lightMood">
             <option value="evening" data-i18n="lightEvening">Evening warm</option>
             <option value="candle" data-i18n="lightCandle">Candlelight</option>
@@ -252,6 +257,15 @@
       <button id="pickCompose" class="primary" data-i18n="composeBtn">✨ Create base design</button>
       <button id="pickOnly" data-i18n="pickOnly">Add to event only</button>
       <button id="pickClose" class="ghost" data-i18n="cancel">Cancel</button>
+    </div>
+  </dialog>
+
+  <dialog id="renderDialog" class="render-dialog">
+    <img id="renderImg" alt="" />
+    <div class="row-actions">
+      <button id="renderSave" class="primary" data-i18n="renderDownload">⬇ Download</button>
+      <button id="renderToDeck" data-i18n="renderToDeck">＋ Add to presentation</button>
+      <button id="renderClose" class="ghost" data-i18n="close">Close</button>
     </div>
   </dialog>
 

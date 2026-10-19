@@ -2,6 +2,12 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { state, itemOf, emit } from './state.js';
 import { venueBounds, visibleSegments } from './dxf.js';
 import { buildItem, M } from './models.js';
@@ -29,9 +35,16 @@ function init() {
   controls.enableDamping = true;
   controls.maxPolarAngle = Math.PI / 2 - 0.02;
 
-  const loop = () => { requestAnimationFrame(loop); if (!host.offsetParent) return; controls.update(); selBoxes.forEach((b) => b.update()); renderer.render(scene, camera); };
+  let last = performance.now();
+  const loop = (now) => {
+    requestAnimationFrame(loop); if (!host.offsetParent) return;
+    const dt = Math.min(0.05, ((now || performance.now()) - last) / 1000); last = now || performance.now();
+    if (walk) stepWalk(dt); else controls.update();
+    selBoxes.forEach((b) => b.update()); renderer.render(scene, camera);
+  };
   loop();
   initPicking();
+  initWalkInput();
 }
 
 // ---------- click to select, drag on the floor to move ----------
@@ -42,7 +55,7 @@ function initPicking() {
   const setRay = (e) => { const r = el.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera); };
   const pidOf = (obj) => { while (obj && !obj.userData.pid) obj = obj.parent; return obj?.userData.pid; };
   el.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || walk) return;
     down = { x: e.clientX, y: e.clientY };
     setRay(e);
     const hits = ray.intersectObjects([...groups.values()], true);
@@ -196,6 +209,8 @@ export function setLighting(mood, dims = root?.userData) {
 }
 
 export function setCamera(name) {
+  if (name === 'walk') { startWalk(); return; }
+  stopWalk();
   const { cx, cz, W, D, wallH } = root.userData;
   const eye = 1.65;
   const stage = state.placed.find((p) => itemOf(p)?.kind === 'stage');
@@ -246,4 +261,100 @@ export function renderAll() {
 // Close-up of a plan point (cm), used for detail checks.
 export function lookAt(x, y) {
   camera.position.set(x * M + 2.5, 1.7, -y * M - 3); controls.target.set(x * M, 0.4, -y * M); controls.update();
+}
+
+
+// ---------- walking mode: eye-level camera, drag to look, arrows to walk where you look ----------
+let walk = null;
+const EYE = 1.65;
+export const isWalking = () => !!walk;
+function startWalk() {
+  if (!root) rebuild();
+  const { cx, cz, W, D } = root.userData;
+  const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+  const inside = Math.abs(camera.position.x - cx) < W / 2 - 0.3 && Math.abs(camera.position.z - cz) < D / 2 - 0.3;
+  if (!inside) { camera.position.set(cx, EYE, cz + D / 2 - 1.2); dir.set(0, 0, -1); } // start near the front wall, facing in
+  walk = { yaw: Math.atan2(-dir.x, -dir.z), pitch: 0, keys: new Set() };
+  camera.position.y = EYE; controls.enabled = false;
+  state.selection = []; state.selectedId = null; highlight();
+  document.dispatchEvent(new CustomEvent('walk-mode', { detail: true }));
+}
+export function stopWalk() {
+  if (!walk) return;
+  const f = new THREE.Vector3(); camera.getWorldDirection(f);
+  controls.target.copy(camera.position).addScaledVector(f, 2); controls.enabled = true; controls.update();
+  walk = null;
+  document.dispatchEvent(new CustomEvent('walk-mode', { detail: false }));
+}
+function stepWalk(dt) {
+  const k = walk.keys, run = k.has('Shift') ? 2.6 : 1.2;
+  if (k.has('ArrowLeft')) walk.yaw += 1.6 * dt;
+  if (k.has('ArrowRight')) walk.yaw -= 1.6 * dt;
+  const fwd = (k.has('ArrowUp') || k.has('w') ? 1 : 0) - (k.has('ArrowDown') || k.has('s') ? 1 : 0);
+  const side = (k.has('d') ? 1 : 0) - (k.has('a') ? 1 : 0);
+  const sx = -Math.sin(walk.yaw), sz = -Math.cos(walk.yaw); // forward on the floor, following the head
+  camera.position.x += (sx * fwd + -sz * side) * run * dt;
+  camera.position.z += (sz * fwd + sx * side) * run * dt;
+  const { cx, cz, W, D } = root.userData, m = 0.35;
+  camera.position.x = Math.max(cx - W / 2 + m, Math.min(cx + W / 2 - m, camera.position.x));
+  camera.position.z = Math.max(cz - D / 2 + m, Math.min(cz + D / 2 - m, camera.position.z));
+  camera.position.y = EYE;
+  camera.rotation.set(walk.pitch, walk.yaw, 0, 'YXZ');
+}
+function initWalkInput() {
+  const el = renderer.domElement;
+  let look = null;
+  el.addEventListener('pointerdown', (e) => { if (!walk) return; look = { x: e.clientX, y: e.clientY }; el.setPointerCapture(e.pointerId); });
+  el.addEventListener('pointermove', (e) => {
+    if (!walk || !look) return;
+    walk.yaw -= (e.clientX - look.x) * 0.004; walk.pitch = Math.max(-1.1, Math.min(1.1, walk.pitch - (e.clientY - look.y) * 0.004));
+    look = { x: e.clientX, y: e.clientY };
+  });
+  el.addEventListener('pointerup', () => { look = null; });
+  const key = (e) => (e.key.length === 1 ? e.key.toLowerCase() : e.key);
+  window.addEventListener('keydown', (e) => {
+    if (!walk || /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName)) return;
+    if (e.key === 'Escape') { stopWalk(); return; }
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Shift', 'w', 'a', 's', 'd'].includes(key(e))) { walk.keys.add(key(e)); e.preventDefault(); e.stopImmediatePropagation(); }
+  }, true);
+  window.addEventListener('keyup', (e) => { walk?.keys.delete(key(e)); if (e.key === 'Shift') walk?.keys.delete('Shift'); });
+  window.addEventListener('blur', () => walk?.keys.clear());
+}
+
+// ---------- beauty render: the current frame, finished with soft shadows, ambient occlusion, glow and a warm grade ----------
+const GradeShader = {
+  uniforms: { tDiffuse: { value: null }, vignette: { value: 0.32 }, warmth: { value: 0.05 }, grain: { value: 0.025 }, seed: { value: 1 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float vignette, warmth, grain, seed; varying vec2 vUv;
+    float rnd(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233)) + seed) * 43758.5453); }
+    void main(){ vec4 c = texture2D(tDiffuse, vUv);
+      c.rgb += vec3(warmth, warmth * 0.45, -warmth * 0.6) * c.rgb;            // warm, candle-lit grade
+      float d = distance(vUv, vec2(0.5)); c.rgb *= mix(1.0, smoothstep(0.85, 0.25, d), vignette);
+      c.rgb += (rnd(vUv * 1000.0) - 0.5) * grain;                                // fine film grain
+      gl_FragColor = c; }`,
+};
+export async function beautyRender(w = 2560, h = 1440) {
+  if (!renderer) rebuild();
+  selBoxes.forEach((b) => (b.visible = false));
+  const old = renderer.getSize(new THREE.Vector2()), oldAspect = camera.aspect, oldExp = renderer.toneMappingExposure;
+  const shadowLights = []; scene.traverse((o) => { if (o.isLight && o.castShadow) { shadowLights.push([o, o.shadow.mapSize.x, o.shadow.radius]); o.shadow.mapSize.set(4096, 4096); o.shadow.radius = 4; o.shadow.map?.dispose(); o.shadow.map = null; } });
+  const oldFog = scene.fog; scene.fog = new THREE.FogExp2(scene.background || new THREE.Color('#1f1416'), 0.008);
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+  renderer.toneMappingExposure = oldExp * 0.96;
+  const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, samples: 4 }));
+  composer.setSize(w, h);
+  composer.addPass(new RenderPass(scene, camera));
+  const ao = new GTAOPass(scene, camera, w, h); ao.blendIntensity = 0.9; composer.addPass(ao);
+  composer.addPass(new UnrealBloomPass(new THREE.Vector2(w, h), 0.18, 0.4, 0.9));
+  composer.addPass(new OutputPass());
+  const grade = new ShaderPass(GradeShader); grade.uniforms.seed.value = Math.random() * 10; composer.addPass(grade);
+  await new Promise((r) => requestAnimationFrame(r));
+  composer.render();
+  const url = renderer.domElement.toDataURL('image/jpeg', 0.93);
+  composer.dispose(); ao.dispose?.();
+  scene.fog = oldFog; renderer.toneMappingExposure = oldExp;
+  for (const [l, size, rad] of shadowLights) { l.shadow.mapSize.set(size, size); l.shadow.radius = rad; l.shadow.map?.dispose(); l.shadow.map = null; }
+  renderer.setSize(old.x, old.y, false); camera.aspect = oldAspect; camera.updateProjectionMatrix();
+  selBoxes.forEach((b) => (b.visible = true));
+  return url;
 }

@@ -38,6 +38,7 @@ plan.setNamer(itemName);
 // ---------- views ----------
 function showView(v) {
   currentView = v;
+  if (v !== '3d' && v !== 'split') view3d.stopWalk();
   document.querySelectorAll('.tabs button').forEach((x) => x.classList.toggle('active', x.dataset.view === v));
   const split = v === 'split';
   $('stage').classList.toggle('split', split);
@@ -415,6 +416,20 @@ $('redoBtn').onclick = () => emit('redo');
 document.querySelectorAll('[data-cam]').forEach((b) => b.addEventListener('click', () => view3d.setCamera(b.dataset.cam)));
 $('lightMood').addEventListener('change', (e) => { state.mood.light = e.target.value; view3d.setLighting(e.target.value); emit('moodText'); });
 $('renderShot').addEventListener('click', () => view3d.snapshot('render'));
+// walking mode tools
+document.addEventListener('walk-mode', (e) => {
+  $('walkTools').classList.toggle('hidden', !e.detail);
+  document.querySelector('[data-cam="walk"]').classList.toggle('primary', e.detail);
+  if (e.detail) toast(t('walkHint'));
+});
+$('walkExit').onclick = () => view3d.stopWalk();
+$('walkSnap').onclick = () => openRender(view3d.capture(2400, 1350, 'image/jpeg'));
+$('walkBeauty').onclick = async () => { toast(t('rendering')); await new Promise((r) => setTimeout(r, 60)); openRender(await view3d.beautyRender()); };
+let lastRender = null;
+function openRender(url) { lastRender = url; $('renderImg').src = url; $('renderDialog').showModal(); }
+$('renderClose').onclick = () => $('renderDialog').close();
+$('renderSave').onclick = () => { const a = document.createElement('a'); a.href = lastRender; a.download = `${fileBase()} - view ${(state.renders || []).length + 1}.jpg`; a.click(); };
+$('renderToDeck').onclick = () => { (state.renders ||= []).push(lastRender); emit('renders'); toast(t('addedToDeck')); $('renderDialog').close(); };
 $('renderAll').addEventListener('click', () => view3d.renderAll());
 
 // ---------- presentation ----------

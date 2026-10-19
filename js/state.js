@@ -90,7 +90,7 @@ export const blankMood = () => ({
 const blankProject = () => ({
   id: newId('ev'), eventName: '', updated: Date.now(),
   brief: { client: '', type: 'wedding', date: '', guests: 0, venueName: '', notes: '' },
-  venue: null, mood: blankMood(), furniture: [], placed: [], measures: [],
+  venue: null, mood: blankMood(), furniture: [], placed: [], measures: [], renders: [],
 });
 
 export const state = { ...blankProject(), selection: [], selectedId: null };
@@ -101,7 +101,7 @@ export function emit(reason) { listeners.forEach((fn) => fn(reason)); }
 
 export const itemOf = (p) => state.furniture.find((f) => f.id === p.itemId);
 
-const PERSISTED = ['id', 'eventName', 'updated', 'brief', 'venue', 'mood', 'furniture', 'placed', 'measures'];
+const PERSISTED = ['id', 'eventName', 'updated', 'brief', 'venue', 'mood', 'furniture', 'placed', 'measures', 'renders'];
 export const snapshot = () => Object.fromEntries(PERSISTED.map((k) => [k, state[k]]));
 export const serialize = () => JSON.stringify({ ...snapshot(), version: 2 });
 
