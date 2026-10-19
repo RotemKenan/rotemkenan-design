@@ -1,6 +1,6 @@
 import {
   state, PRESETS, INVENTORY, onChange, emit, addFurniture, serialize, load, itemOf,
-  VIEWER, packShare, unpackShare, newProject, saveProject, listProjects, openProject, deleteProject, restoreLastProject, newId,
+  VIEWER, backupAll, restoreAll, packShare, unpackShare, newProject, saveProject, listProjects, openProject, deleteProject, restoreLastProject, newId,
   commitHistory, undo, redo, canUndo, canRedo, saveInventory,
 } from './state.js';
 import { parseVenue, demoVenue, exportDxf, looksLikeDxf, VENUE_LIBRARY } from './dxf.js';
@@ -559,3 +559,25 @@ $('shareLink').onclick = async () => {
   const url = await packShare();
   try { await navigator.clipboard.writeText(url); toast(t('shareCopied')); } catch { prompt(t('shareCopy'), url); }
 };
+
+// ---------- backup everything / restore on another computer ----------
+$('backupAll').onclick = async () => {
+  closeMenu();
+  download(`event-studio-backup-${new Date().toISOString().slice(0, 10)}.json`, await backupAll(), 'application/json');
+  try { localStorage.setItem('rk-last-backup', String(Date.now())); } catch { /* ignore */ }
+  toast(t('backupDone'));
+};
+$('restoreAll').onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = ''; closeMenu(); if (!f) return;
+  try {
+    const n = await restoreAll(await f.text());
+    toast(t('restoreDone', { n }));
+    setTimeout(() => location.reload(), 1200); // reload so the restored inventory and events are picked up
+  } catch { toast(t('restoreBad')); }
+};
+// a gentle reminder when the last backup is over a week old
+(() => {
+  if (VIEWER) return;
+  let last = 0; try { last = +localStorage.getItem('rk-last-backup') || 0; } catch { /* ignore */ }
+  if (Date.now() - last > 7 * 864e5) setTimeout(() => toast(t('backupRemind')), 4000);
+})();

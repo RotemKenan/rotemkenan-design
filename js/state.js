@@ -185,3 +185,25 @@ export async function unpackShare(hash = location.hash) {
   const z = unb64u(hash.slice(3));
   return JSON.parse(new TextDecoder().decode(await pipe(z, new DecompressionStream('deflate-raw'))));
 }
+
+// ---------- full backup: every event + the inventory in one file ----------
+export async function backupAll() {
+  await saveProject();
+  return JSON.stringify({ kind: 'rk-backup', version: 1, date: new Date().toISOString(), events: await listProjects(), inventory: localStorage.getItem(INV_KEY) });
+}
+// Restores a backup next to what is here: an event in both places keeps whichever copy was saved last.
+export async function restoreAll(text) {
+  const b = JSON.parse(text);
+  if (b.kind !== 'rk-backup') throw new Error('not a backup');
+  const mine = new Map((await listProjects()).map((p) => [p.id, p]));
+  let n = 0;
+  for (const ev of b.events || []) {
+    const cur = mine.get(ev.id);
+    if (!cur || (ev.updated || 0) >= (cur.updated || 0)) { await tx('readwrite', (s) => s.put(ev)); n++; }
+  }
+  if (b.inventory) {
+    const theirs = JSON.parse(b.inventory), here = JSON.parse(localStorage.getItem(INV_KEY) || '{}');
+    localStorage.setItem(INV_KEY, JSON.stringify({ ...here, ...theirs }));
+  }
+  return n;
+}
