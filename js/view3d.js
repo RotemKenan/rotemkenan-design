@@ -132,9 +132,12 @@ export function rebuild() {
     const dx = (s.x2 - s.x1) * M, dz = -(s.y2 - s.y1) * M, len = Math.hypot(dx, dz);
     if (len < 0.05) continue;
     const isCol = /col/i.test(s.layer), isWin = /win|glass/i.test(s.layer);
-    const h = isWin ? wallH * 0.75 : wallH;
-    const m = isWin ? mat('#cfe3ef', { transparent: true, opacity: 0.25, roughness: 0.05 }) : isCol ? mat('#e8e2da') : wallMat;
-    const wmesh = mesh(new THREE.BoxGeometry(len, h, isCol ? 0.5 : 0.15), m, (s.x1 + s.x2) / 2 * M, (isWin ? wallH * 0.15 : 0) + h / 2, -(s.y1 + s.y2) / 2 * M);
+    // Doors, furniture, labels and the client's old layout are only marked on the floor; fixed units are low counters.
+    const flat = /door|furn|table|station|chair|label|note|text|dim|client|hatch/i.test(s.layer);
+    const fixed = !flat && /fix|counter|cabinet|bar/i.test(s.layer);
+    const h = flat ? 0.01 : fixed ? 0.95 : isWin ? wallH * 0.75 : wallH;
+    const m = flat ? mat('#6f5a52') : isWin ? mat('#cfe3ef', { transparent: true, opacity: 0.25, roughness: 0.05 }) : isCol ? mat('#e8e2da') : fixed ? mat('#d8cfc3') : wallMat;
+    const wmesh = mesh(new THREE.BoxGeometry(len, h, flat ? 0.03 : isCol ? 0.5 : 0.15), m, (s.x1 + s.x2) / 2 * M, (isWin ? wallH * 0.15 : 0) + h / 2, -(s.y1 + s.y2) / 2 * M);
     wmesh.rotation.y = Math.atan2(-dz, dx);
     root.add(wmesh);
   }
