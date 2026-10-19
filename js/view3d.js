@@ -127,7 +127,7 @@ export function rebuild() {
   if (state.venue?.image) {
     const im = state.venue.image, tex = new THREE.TextureLoader().load(im.src);
     tex.colorSpace = THREE.SRGBColorSpace;
-    const plan = mesh(new THREE.PlaneGeometry(im.w * M, im.h * M), new THREE.MeshStandardMaterial({ map: tex, transparent: true, opacity: 0.85, roughness: 0.9 }), (im.w / 2) * M, 0.005, -(im.h / 2) * M);
+    const plan = mesh(new THREE.PlaneGeometry(im.w * M, im.h * M), new THREE.MeshStandardMaterial({ map: tex, transparent: true, opacity: 0.85, roughness: 0.9 }), ((im.x || 0) + im.w / 2) * M, 0.005, -((im.y || 0) + im.h / 2) * M);
     plan.rotation.x = -Math.PI / 2; plan.castShadow = false; root.add(plan);
   }
 

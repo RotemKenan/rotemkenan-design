@@ -72,7 +72,7 @@ function drawUnderlay(im) {
   let img = underlayCache.get(im.src);
   if (!img) { img = new Image(); img.onload = () => draw(); img.src = im.src; underlayCache.set(im.src, img); }
   if (!img.complete) return;
-  const a = toScreen(0, im.h), b = toScreen(im.w, 0);
+  const a = toScreen(im.x || 0, (im.y || 0) + im.h), b = toScreen((im.x || 0) + im.w, im.y || 0);
   ctx.globalAlpha = im.opacity ?? 0.7; ctx.drawImage(img, a.x, a.y, b.x - a.x, b.y - a.y); ctx.globalAlpha = 1;
 }
 
@@ -155,7 +155,8 @@ function drawOverlay() {
   if (calib) {
     ctx.fillStyle = '#5a1f2a'; ctx.strokeStyle = '#5a1f2a'; ctx.lineWidth = 2;
     const pts = calib.pts.map((q) => toScreen(q.x, q.y));
-    pts.forEach((q) => { ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, Math.PI * 2); ctx.fill(); });
+    pts.forEach((q) => { ctx.beginPath(); ctx.arc(q.x, q.y, 6, 0, Math.PI * 2); ctx.fill(); });
+    if (calibHover && pts.length === 1) { ctx.setLineDash([6, 4]); ctx.strokeRect(pts[0].x, pts[0].y, calibHover.x - pts[0].x, calibHover.y - pts[0].y); ctx.setLineDash([]); }
   }
   if (marquee) {
     const a = toScreen(marquee.x0, marquee.y0), b = toScreen(marquee.x1, marquee.y1);
@@ -253,6 +254,8 @@ function setSelection(ids) { state.selection = ids; state.selectedId = ids[ids.l
 const snapOn = () => document.getElementById('snapToggle')?.checked;
 const snap = (v) => (snapOn() ? Math.round(v / 10) * 10 : v);
 const rel = (e) => { const r = canvas.getBoundingClientRect(); return { sx: e.clientX - r.left, sy: e.clientY - r.top }; };
+// Page coordinates of a plan point (used by tests and tooltips).
+export function clientAt(x, y) { const r = canvas.getBoundingClientRect(), s = toScreen(x, y); return { x: r.left + s.x, y: r.top + s.y }; }
 export function worldAt(clientX, clientY) { const r = canvas.getBoundingClientRect(); return toWorld(clientX - r.left, clientY - r.top); }
 
 function rotateHandle(p, it) { // screen position of the rotate knob above the selected item
@@ -262,15 +265,15 @@ function rotateHandle(p, it) { // screen position of the rotate knob above the s
 
 let hover = null, marquee = null, live = null;
 
-// Scale calibration: the user taps two points on the plan; cb receives the distance between them (cm).
-let calib = null;
+// Room calibration: the user taps two points on the plan; cb receives both points (world cm).
+let calib = null, calibHover = null;
 export function startCalibrate(cb) { calib = { pts: [], cb }; canvas.style.cursor = 'crosshair'; draw(); }
 
 canvas.addEventListener('pointerdown', (e) => {
   const { sx, sy } = rel(e), w = toWorld(sx, sy);
   if (calib) {
     calib.pts.push(w); draw();
-    if (calib.pts.length === 2) { const [a, b] = calib.pts, cb = calib.cb; calib = null; canvas.style.cursor = 'grab'; setTimeout(() => cb(Math.hypot(b.x - a.x, b.y - a.y)), 30); }
+    if (calib.pts.length === 2) { const [a, b] = calib.pts, cb = calib.cb; calib = null; canvas.style.cursor = 'grab'; setTimeout(() => cb(a, b), 30); }
     return;
   }
   canvas.setPointerCapture(e.pointerId);
@@ -297,6 +300,7 @@ canvas.addEventListener('pointerdown', (e) => {
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('pointermove', (e) => {
   const { sx, sy } = rel(e), w = toWorld(sx, sy);
+  if (calib) { calibHover = { x: sx, y: sy }; draw(); return; }
   if (!drag) {
     const h = hit(w.x, w.y);
     if (h !== hover) { hover = h; draw(); }

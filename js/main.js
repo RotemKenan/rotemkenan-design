@@ -119,12 +119,12 @@ $('venueFile').addEventListener('change', async (e) => {
       // A screenshot / photo of the plan: place it to scale as a background to design on.
       const src = await blobToDataUrl(f, 2400);
       const img = await new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = () => j(new Error('image')); i.src = src; });
-      const m = parseFloat(String(prompt(t('askWidth'), '20') || '').replace(',', '.'));
-      if (!(m > 0)) return;
-      const w = m * 100, h = Math.round((w * img.height) / img.width);
-      state.venue = { segments: [], layers: {}, wallHeight: +$('wallHeight').value || 320, image: { src, w, h, opacity: 0.7 } };
-      toast(t('imgLoaded', { w: m, h: (h / 100).toFixed(2) }));
-      emit('venue'); plan.fit(); return;
+      // Place it roughly first (2000 cm wide), then the user marks the room corners and types width + length.
+      const w = 2000, h = Math.round((w * img.height) / img.width);
+      state.venue = { segments: [], layers: {}, wallHeight: +$('wallHeight').value || 320, image: { src, x: 0, y: 0, w, h, opacity: 0.7 } };
+      emit('venue'); showView(currentView === 'split' ? 'split' : 'plan'); plan.fit();
+      calibrateRoom();
+      return;
     }
     if (/\.dwg$/i.test(f.name)) { toast(t('dwgClosed')); return; }
     const text = await f.text();
@@ -286,15 +286,27 @@ $('autoLayout').addEventListener('click', () => {
 $('clearLayout').addEventListener('click', () => { state.placed = state.placed.filter((p) => p.locked); state.selection = []; emit('placed'); });
 $('exportDxf').addEventListener('click', () => download(`${fileBase()} - plan.dxf`, exportDxf(), 'application/dxf'));
 $('fitView').addEventListener('click', plan.fit);
-$('scaleBtn').addEventListener('click', () => {
-  toast(t('scaleStep1'));
-  plan.startCalibrate((dist) => {
-    const m = parseFloat(String(prompt(t('scaleAsk'), '') || '').replace(',', '.'));
-    const im = state.venue?.image; if (!(m > 0) || !im || !dist) return;
-    const k = (m * 100) / dist; im.w *= k; im.h *= k;
-    emit('venue'); plan.fit(); toast(t('scaleDone'));
+// Tap two opposite room corners, then type the real width and length: the plan image is stretched to fit
+// (screenshots are often not to scale in both directions) and the 4 room walls are drawn.
+const askMetres = (msg, def = '') => parseFloat(String(prompt(msg, def) || '').replace(',', '.'));
+function calibrateRoom() {
+  $('stage').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  toast(t('cornersStep'));
+  plan.startCalibrate((a, b) => {
+    const im = state.venue?.image; if (!im) return;
+    const W = askMetres(t('askRoomWidth')); if (!(W > 0)) return;
+    const L = askMetres(t('askRoomLength')); if (!(L > 0)) return;
+    const dx = Math.abs(b.x - a.x), dy = Math.abs(b.y - a.y); if (dx < 1 || dy < 1) return;
+    const kx = (W * 100) / dx, ky = (L * 100) / dy, x0 = Math.min(a.x, b.x), y0 = Math.min(a.y, b.y);
+    // move the room's bottom-left corner to 0,0 and scale each axis
+    im.x = ((im.x || 0) - x0) * kx; im.y = ((im.y || 0) - y0) * ky; im.w *= kx; im.h *= ky;
+    const Wc = W * 100, Lc = L * 100;
+    state.venue.segments = [[0, 0, Wc, 0], [Wc, 0, Wc, Lc], [Wc, Lc, 0, Lc], [0, Lc, 0, 0]].map(([x1, y1, x2, y2]) => ({ x1, y1, x2, y2, layer: 'WALLS' }));
+    state.venue.layers = { WALLS: true };
+    emit('venue'); plan.fit(); toast(t('roomDone', { w: W, l: L }));
   });
-});
+}
+$('scaleBtn').addEventListener('click', calibrateRoom);
 $('undoBtn').onclick = () => emit('undo');
 $('redoBtn').onclick = () => emit('redo');
 

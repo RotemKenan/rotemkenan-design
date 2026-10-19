@@ -65,7 +65,8 @@ export function venueBounds(venue) {
     minX = Math.min(minX, s.x1, s.x2); maxX = Math.max(maxX, s.x1, s.x2);
     minY = Math.min(minY, s.y1, s.y2); maxY = Math.max(maxY, s.y1, s.y2);
   }
-  if (venue?.image) { minX = Math.min(minX, 0); minY = Math.min(minY, 0); maxX = Math.max(maxX, venue.image.w); maxY = Math.max(maxY, venue.image.h); }
+  // The room walls define the bounds; a plan image only counts while no walls exist yet.
+  if (venue?.image && !isFinite(minX)) { const im = venue.image; minX = im.x || 0; minY = im.y || 0; maxX = minX + im.w; maxY = minY + im.h; }
   if (!isFinite(minX)) return { minX: 0, minY: 0, maxX: 2000, maxY: 1500 };
   return { minX, minY, maxX, maxY };
 }
