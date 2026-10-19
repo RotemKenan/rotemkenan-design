@@ -194,6 +194,17 @@ export function buildItem(it, { chairs = true } = {}) {
       g.add(mesh(new THREE.BoxGeometry(w - 0.03, 0.006, d - 0.03), texMat('marble', c, 2), 0, h + 0.003, 0));
       break;
     }
+    case 'stool': { // round wooden seat on four splayed black hairpin legs with a foot ring
+      const steel = texMat('iron', '#151413', 2), seatR = Math.min(w, d) * 0.45;
+      g.add(mesh(new THREE.CylinderGeometry(seatR, seatR, 0.035, 32), texMat(it.finish || 'walnut', c, 1), 0, h - 0.018, 0));
+      for (let i = 0; i < 4; i++) {
+        const a = Math.PI / 4 + (i * Math.PI) / 2, top = new THREE.Vector3(Math.cos(a) * seatR * 0.7, h - 0.035, Math.sin(a) * seatR * 0.7);
+        const foot = new THREE.Vector3(Math.cos(a) * w * 0.5, 0, Math.sin(a) * w * 0.5);
+        g.add(mesh(new THREE.TubeGeometry(new THREE.LineCurve3(top, foot), 1, 0.008, 6), steel));
+      }
+      const ring = mesh(new THREE.TorusGeometry(w * 0.42, 0.007, 6, 40), steel, 0, h * 0.32, 0); ring.rotation.x = Math.PI / 2; g.add(ring);
+      break;
+    }
     case 'chair': {
       g.add(chair(c)); // back toward +y in plan, seat facing -y, like every seat
       break;

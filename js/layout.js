@@ -189,7 +189,7 @@ export function composeDesign(items) {
   // 4. bistro / cocktail tables in groups of 3, with chairs if any were chosen
   while (pool.bistro?.length || pool.cocktail?.length) {
     const m = [];
-    for (let i = 0; i < 3; i++) { const t = take('bistro', 'cocktail'); if (!t) break; m.push({ f: t, dx: (i - 1) * 140, dy: 0, rot: 0 }); for (const s of [1, -1]) { const ch = take('chair'); if (ch) m.push({ f: ch, dx: (i - 1) * 140, dy: s * 60, rot: s > 0 ? 0 : 180 }); } }
+    for (let i = 0; i < 3; i++) { const t = take('bistro', 'cocktail'); if (!t) break; m.push({ f: t, dx: (i - 1) * 140, dy: 0, rot: 0 }); for (const s of [1, -1]) { const ch = take('stool', 'chair'); if (ch) m.push({ f: ch, dx: (i - 1) * 140, dy: s * 60, rot: s > 0 ? 0 : 180 }); } }
     clusters.push(m);
   }
   // 5. whatever is left (low tables, poufs, chairs…) as small groups

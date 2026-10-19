@@ -77,7 +77,7 @@ export function seatsOf(it) {
   switch (it.kind) {
     case 'curvedSofa': { const R = it.w / 2, r = (it.innerW || it.w - 110) / 2, mid = (R + r) / 2; const span = Math.acos(Math.max(-0.2, Math.min(0.95, (R - (it.d || R)) / r))); return Math.max(2, Math.floor((2 * span * mid) / 65)); }
     case 'sofa': case 'channelSofa': case 'bench': return Math.max(1, Math.floor((it.w - (it.kind === 'bench' ? 0 : 30)) / 60));
-    case 'club': case 'slipper': case 'loungeChair': case 'armchair': case 'pouf': case 'chair': return 1;
+    case 'club': case 'slipper': case 'loungeChair': case 'armchair': case 'pouf': case 'chair': case 'stool': return 1;
     default: return 0;
   }
 }
