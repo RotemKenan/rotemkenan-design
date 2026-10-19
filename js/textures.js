@@ -88,3 +88,26 @@ export function texMat(type, color, repeat = 1, extra = {}) {
 }
 
 export const TEXTURE_TYPES = Object.keys(PAINTERS);
+
+// Fabric from a real photo crop (patterned velvets, cushion prints, fringe). Tinted white = original colours.
+const loader = new THREE.TextureLoader();
+const photoCache = new Map();
+const pending = new Set();
+function photoTexture(url) {
+  if (photoCache.has(url)) return photoCache.get(url);
+  let done;
+  const p = new Promise((r) => (done = r));
+  pending.add(p);
+  const tex = loader.load(url, () => { pending.delete(p); done(); }, undefined, () => { pending.delete(p); done(); });
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  photoCache.set(url, tex);
+  return tex;
+}
+export function photoMat(url, rx = 1, ry = 1, extra = {}) {
+  const map = photoTexture(url).clone();
+  map.repeat.set(rx, ry);
+  return new THREE.MeshPhysicalMaterial({ map, roughness: 0.9, sheen: 0.6, sheenRoughness: 0.5, sheenColor: new THREE.Color('#fff2e0'), ...extra });
+}
+// Resolves once every photo texture requested so far has loaded (needed before exporting GLB files).
+export const texturesReady = () => Promise.all([...pending]);

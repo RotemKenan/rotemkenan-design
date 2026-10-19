@@ -89,7 +89,7 @@ export function suggestLayout() {
   each('buffet', (f, i) => scan(f, along(H * 0.4, H - 100, 25).map((y) => [i % 2 ? f.d / 2 + 40 : W - f.d / 2 - 40, y]), 90));
 
   // 5. Lounge corners near the entrance.
-  const lounge = ['sofa', 'armchair', 'curvedSofa', 'channelSofa', 'club', 'slipper', 'lowTable'].flatMap(byKind);
+  const lounge = ['sofa', 'armchair', 'curvedSofa', 'channelSofa', 'bench', 'club', 'loungeChair', 'slipper', 'pouf', 'lowTable', 'cushion'].flatMap(byKind);
   lounge.forEach((f) => { for (let i = 0; i < f.qty; i++) scan(f, along(f.d / 2 + 80, H / 3, 25).flatMap((y) => along(f.w / 2 + 60, W / 3, 30).flatMap((x) => [[x, y], [W - x, y]])), 180, 15); });
   [...byKind('cocktail'), ...byKind('bistro')].forEach((f) => { for (let i = 0; i < f.qty; i++) scan(f, along(220, H / 2, 40).flatMap((y) => along(W / 2 - 400, W / 2 + 400, 60).map((x) => [x, y])), 0, 60); });
 

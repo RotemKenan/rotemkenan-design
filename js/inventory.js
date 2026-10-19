@@ -7,7 +7,7 @@ import JSZip from 'jszip';
 import { INVENTORY, saveInventory, emit } from './state.js';
 import { buildItem } from './models.js';
 import { itemDxf, itemOutline } from './dxf.js';
-import { TEXTURE_TYPES } from './textures.js';
+import { TEXTURE_TYPES, texturesReady } from './textures.js';
 
 const $ = (id) => document.getElementById(id);
 let selected = INVENTORY[0];
@@ -86,7 +86,7 @@ export function showPreview() {
   model = buildItem(selected, { chairs: false });
   scene.add(model);
   const size = Math.max(selected.w, selected.d, selected.h) / 100;
-  const dist = size * 2.2 + 0.5;
+  const dist = size * 1.5 + 0.8;
   camera.position.set(dist * 0.55, dist * 0.5, dist * 0.75);
   controls.target.set(0, selected.h / 200, 0);
   $('invPreviewInfo').innerHTML = `<strong>${selected.name}</strong> · ${selected.w} × ${selected.d} × H ${selected.h} cm
@@ -116,11 +116,12 @@ function topViewSvg(it) {
     </g></svg>`;
 }
 
-export function exportGlb(it) {
+export async function exportGlb(it) {
   const obj = buildItem(it, { chairs: false });
+  await texturesReady();
   obj.name = it.id;
   obj.userData = { name: it.name, widthCm: it.w, depthCm: it.d, heightCm: it.h, seatHeightCm: it.seatH, units: 'metres', front: '+Z (back of seats at -Z)', supplier: it.supplier, sku: it.sku };
-  return new Promise((resolve, reject) => new GLTFExporter().parse(obj, (buf) => resolve(new Blob([buf], { type: 'model/gltf-binary' })), reject, { binary: true, maxTextureSize: 1024 }));
+  return await new Promise((resolve, reject) => new GLTFExporter().parse(obj, (buf) => resolve(new Blob([buf], { type: 'model/gltf-binary' })), reject, { binary: true, maxTextureSize: 1024 }));
 }
 
 export async function exportAllZip() {

@@ -84,7 +84,7 @@ export function footprint(p, item) {
   return [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]].map(([x, y]) => ({ x: p.x + x * c - y * s, y: p.y + x * s + y * c }));
 }
 
-const SEATING = ['sofa', 'armchair', 'club', 'slipper', 'channelSofa'];
+const SEATING = ['sofa', 'armchair', 'club', 'slipper', 'channelSofa', 'bench', 'loungeChair'];
 
 // Top-view outline of one item in its own coordinates (cm).
 export function itemOutline(it) {
@@ -99,11 +99,12 @@ export function itemOutline(it) {
     for (const a of [g.a0, g.a1]) L(Math.cos(a) * g.r, g.cy + Math.sin(a) * g.r, Math.cos(a) * g.R, g.cy + Math.sin(a) * g.R);
   } else if (isRound(it)) {
     e.push({ t: 'CIRCLE', x: 0, y: 0, r: hw });
+    if (it.kind === 'pouf') e.push({ t: 'CIRCLE', x: 0, y: 0, r: hw - 4 }); // fringe line
     if (it.kind === 'bistro') e.push({ t: 'CIRCLE', x: 0, y: 0, r: Math.min(hw * 0.8, 28) }, { t: 'CIRCLE', x: 0, y: 0, r: 4 });
   } else {
     rect(hw, hd);
     if (SEATING.includes(it.kind)) {
-      const back = Math.min(18, it.d * 0.22), arm = it.kind === 'slipper' ? 0 : Math.min(15, it.w * 0.15);
+      const back = Math.min(18, it.d * 0.22), arm = ['slipper', 'bench'].includes(it.kind) ? 0 : Math.min(15, it.w * 0.15);
       L(-hw, hd - back, hw, hd - back);                                  // backrest
       if (arm) { L(-hw + arm, -hd, -hw + arm, hd - back); L(hw - arm, -hd, hw - arm, hd - back); } // arms
     }

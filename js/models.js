@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { state } from './state.js';
 import { chairPositions, curvedGeom } from './plan2d.js';
-import { texMat } from './textures.js';
+import { texMat, photoMat } from './textures.js';
 
 export const M = 0.01; // cm → m
 
@@ -161,7 +161,7 @@ export function buildItem(it, { chairs = true } = {}) {
       g.add(mesh(new THREE.BoxGeometry(w, h - 0.14, 0.16), m, 0, 0.14 + (h - 0.14) / 2, -d / 2 + 0.08));
       for (const x of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(0.14, h - 0.2, d), m, x * (w / 2 - 0.07), 0.14 + (h - 0.2) / 2, 0));
       const groove = mat(shade(c, 0.6), { roughness: 1 });
-      for (let x = -w / 2 + 0.12; x < w / 2 - 0.1; x += 0.1) g.add(mesh(new THREE.BoxGeometry(0.008, h - 0.3, 0.01), groove, x, 0.3 + (h - 0.3) / 2 + 0.07, -d / 2 + 0.165));
+      for (let x = -w / 2 + 0.12; x < w / 2 - 0.1; x += 0.1) g.add(mesh(new THREE.BoxGeometry(0.008, h - 0.5, 0.01), groove, x, 0.46 + (h - 0.5) / 2, -d / 2 + 0.165));
       for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) g.add(mesh(new THREE.CylinderGeometry(0.012, 0.006, 0.14), BLACK(), x * (w / 2 - 0.05), 0.07, z * (d / 2 - 0.05)));
       break;
     }
@@ -182,6 +182,49 @@ export function buildItem(it, { chairs = true } = {}) {
         const a = cg.a0 + (cg.a1 - cg.a0) * f, rr = (cg.R + cg.r) / 2 * M;
         g.add(mesh(new THREE.BoxGeometry(0.07, 0.08, 0.07), BLACK(), Math.cos(a) * rr, 0.04, -cg.cy * M - Math.sin(a) * rr));
       }
+      break;
+    }
+    case 'pouf': {
+      const r = w / 2, fringeH = h * 0.42;
+      const tiles = 3, tileH = ((Math.PI * w) / tiles) * 0.38; // photo crops are ~2.6:1
+      const body = it.texture ? photoMat(it.texture, tiles, (h - 0.02) / tileH) : texMat('velvet', c, 2);
+      const top = it.texture ? photoMat(it.texture, 1.2, 1.2) : body;
+      g.add(mesh(new THREE.CylinderGeometry(r, r, h - 0.02, 48, 1, true), body, 0, (h - 0.02) / 2, 0));
+      const cap = mesh(new THREE.CylinderGeometry(r - 0.01, r, 0.04, 48), [body, top, top], 0, h - 0.02, 0);
+      g.add(cap);
+      const piping = texMat('velvet', new THREE.Color(it.trim || '#7a2418').multiplyScalar(0.6), 4);
+      for (const y of [h - 0.05, h - 0.13]) { const t = mesh(new THREE.TorusGeometry(r + 0.004, 0.008, 8, 64), piping, 0, y, 0); t.rotation.x = Math.PI / 2; g.add(t); }
+      const fringe = photoMat('assets/textures/fringe.jpg', 6, 1, { side: THREE.DoubleSide, color: new THREE.Color(it.trim || '#ffffff') });
+      g.add(mesh(new THREE.CylinderGeometry(r + 0.012, r + 0.028, fringeH, 64, 1, true), fringe, 0, fringeH / 2 + 0.005, 0));
+      const band = mesh(new THREE.TorusGeometry(r + 0.013, 0.012, 8, 64), piping, 0, fringeH, 0); band.rotation.x = Math.PI / 2; g.add(band);
+      break;
+    }
+    case 'cushion': {
+      const face = it.texture ? photoMat(it.texture, 1, 1) : texMat('velvet', c, 1);
+      const side = texMat('velvet', it.trim || '#8a6a2a', 2);
+      const cu = mesh(new THREE.BoxGeometry(w, h, d), [side, side, side, side, face, face], 0, h / 2, 0);
+      g.add(cu);
+      break;
+    }
+    case 'bench': {
+      const m = texMat(it.finish || 'velvet', c, 2.5);
+      g.add(mesh(new THREE.BoxGeometry(w, 0.33, d), m, 0, 0.12 + 0.165, 0));
+      g.add(mesh(new THREE.BoxGeometry(w, h - 0.12, 0.15), m, 0, 0.12 + (h - 0.12) / 2, -d / 2 + 0.075));
+      const groove = mat(shade(c, 0.55), { roughness: 1 });
+      const panels = Math.max(2, Math.round(w / 0.4));
+      for (let i = 1; i < panels; i++) g.add(mesh(new THREE.BoxGeometry(0.008, h - 0.47, 0.01), groove, -w / 2 + (w * i) / panels, 0.45 + (h - 0.45) / 2, -d / 2 + 0.152));
+      for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) g.add(mesh(new THREE.CylinderGeometry(0.01, 0.007, 0.12), BLACK(), x * (w / 2 - 0.06), 0.06, z * (d / 2 - 0.06)));
+      break;
+    }
+    case 'loungeChair': { // upholstered shell on a black steel frame with an X stretcher
+      const m = texMat(it.finish || 'velvet', c, 1.5), steel = texMat('iron', '#151413', 2);
+      const legH = 0.2;
+      g.add(mesh(new THREE.BoxGeometry(w - 0.14, 0.18, d - 0.1), m, 0, legH + 0.09 + 0.12, 0.03));
+      g.add(mesh(new THREE.BoxGeometry(w - 0.1, h - legH, 0.1), m, 0, legH + (h - legH) / 2, -d / 2 + 0.05));
+      for (const x of [-1, 1]) g.add(mesh(new THREE.BoxGeometry(0.08, 0.42, d), m, x * (w / 2 - 0.04), legH + 0.21 + 0.1, 0));
+      for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) g.add(mesh(new THREE.CylinderGeometry(0.01, 0.01, legH + 0.1), steel, x * (w / 2 - 0.08), (legH + 0.1) / 2, z * (d / 2 - 0.08)));
+      const diag = Math.hypot(w - 0.16, d - 0.16);
+      for (const s of [1, -1]) { const b = mesh(new THREE.CylinderGeometry(0.008, 0.008, diag), steel, 0, 0.08, 0); b.rotation.z = Math.PI / 2; b.rotation.y = s * Math.atan2(d - 0.16, w - 0.16); g.add(b); }
       break;
     }
     default:

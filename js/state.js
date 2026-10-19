@@ -34,6 +34,18 @@ const DEFAULT_INVENTORY = [
   { id: 'curved-rust', kind: 'curvedSofa', name: 'Curved velvet sofa, rust', w: 346, d: 120, h: 80, seatH: 45, color: '#8a3f22', finish: 'velvet', supplier: 'Sugoy Design', innerW: 200, notes: 'Outer arc Ø346, inner arc Ø200 (supplier)', known: ['w', 'innerW'] },
   { id: 'slipper-rust', kind: 'slipper', name: 'Velvet slipper chair, rust', w: 60, d: 70, h: 80, seatH: 45, color: '#7e3a1f', finish: 'velvet', supplier: 'Sugoy Design' },
   { id: 'slipper-green', kind: 'slipper', name: 'Velvet slipper chair, green', w: 60, d: 70, h: 80, seatH: 45, color: '#5f7744', finish: 'velvet', supplier: 'Sugoy Design' },
+  { id: 'channel-chair-green', kind: 'channelSofa', name: 'Channel velvet armchair, olive', w: 80, d: 75, h: 75, seatH: 45, color: '#4d5e33', finish: 'velvet' },
+  { id: 'bench-burgundy', kind: 'bench', name: 'Armless velvet bench sofa, burgundy', w: 160, d: 70, h: 85, seatH: 45, color: '#6e1020', finish: 'velvet' },
+  { id: 'armchair-navy', kind: 'loungeChair', name: 'Navy velvet armchair, black steel frame', w: 70, d: 75, h: 95, seatH: 45, color: '#25365a', finish: 'velvet' },
+  { id: 'slipper-teal', kind: 'slipper', name: 'Velvet slipper chair, teal', w: 60, d: 70, h: 80, seatH: 45, color: '#3f7a72', finish: 'velvet', supplier: 'Sugoy Design' },
+  { id: 'curved-navy', kind: 'curvedSofa', name: 'Curved velvet sofa, navy', w: 346, d: 120, h: 80, seatH: 45, innerW: 200, color: '#1c2a52', finish: 'velvet', supplier: 'Sugoy Design', notes: 'Same model as green / rust: outer arc Ø346, inner Ø200', known: ['w', 'innerW'] },
+  { id: 'curved-brown', kind: 'curvedSofa', name: 'Curved velvet sofa, chocolate', w: 346, d: 120, h: 80, seatH: 45, innerW: 200, color: '#4a2716', finish: 'velvet', supplier: 'Sugoy Design', notes: 'Same model as green / rust: outer arc Ø346, inner Ø200', known: ['w', 'innerW'] },
+  { id: 'pouf-damask', kind: 'pouf', shape: 'round', name: 'Fringed pouf, gothic damask velvet', w: 50, d: 50, h: 45, seatH: 45, color: '#ffffff', finish: 'velvet', texture: 'assets/textures/pouf-damask.jpg', trim: '#a8402e' },
+  { id: 'pouf-tiger', kind: 'pouf', shape: 'round', name: 'Fringed pouf, tiger velvet', w: 50, d: 50, h: 45, seatH: 45, color: '#ffffff', finish: 'velvet', texture: 'assets/textures/pouf-tiger.jpg', trim: '#8f2a22' },
+  { id: 'pouf-ikat', kind: 'pouf', shape: 'round', name: 'Fringed pouf, wine ikat velvet', w: 50, d: 50, h: 45, seatH: 45, color: '#ffffff', finish: 'velvet', texture: 'assets/textures/pouf-ikat.jpg', trim: '#9a3226' },
+  { id: 'pouf-acanthus', kind: 'pouf', shape: 'round', name: 'Fringed pouf, acanthus velvet', w: 50, d: 50, h: 45, seatH: 45, color: '#ffffff', finish: 'velvet', texture: 'assets/textures/pouf-acanthus.jpg', trim: '#a8452e' },
+  { id: 'pouf-rust', kind: 'pouf', shape: 'round', name: 'Fringed pouf, plain rust velvet', w: 50, d: 50, h: 45, seatH: 45, color: '#9a2e14', finish: 'velvet', trim: '#a8452e' },
+  { id: 'cushion-fringe', kind: 'cushion', name: 'Fringed velvet cushion, ochre print', w: 50, d: 15, h: 50, seatH: 0, color: '#ffffff', finish: 'velvet', texture: 'assets/textures/cushion-fringe.jpg', trim: '#8a6a2a', notes: 'Decor — usually placed on sofas' },
 ].map((it) => ({ seats: 0, measured: false, supplier: '', sku: '', notes: '', stock: 1, known: [], ...it, photo: I(it.id) }));
 
 const INV_KEY = 'rk-inventory';
