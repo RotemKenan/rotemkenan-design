@@ -73,6 +73,7 @@ export async function findInventory(images, text = '') {
 // Rough seating per piece: people sit about 60–65 cm apart on sofas; single seats count 1.
 export function seatsOf(it) {
   if (!it) return 0;
+  if (typeof it.seatCount === 'number') return it.seatCount; // typed in by hand
   // a table only seats people through the chairs drawn around it; inventory tables come without chairs
   if (['roundTable', 'rectTable', 'bistro', 'cocktail', 'counter', 'bar'].includes(it.kind)) return it.invId || it.photo ? 0 : it.seats || 0;
   if (it.seats) return it.seats;

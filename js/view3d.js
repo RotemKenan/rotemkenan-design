@@ -8,7 +8,7 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { state, itemOf, emit } from './state.js';
+import { VIEWER, state, itemOf, emit } from './state.js';
 import { venueBounds, visibleSegments } from './dxf.js';
 import { buildItem, M } from './models.js';
 import { texMat } from './textures.js';
@@ -55,7 +55,7 @@ function initPicking() {
   const setRay = (e) => { const r = el.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(ndc, camera); };
   const pidOf = (obj) => { while (obj && !obj.userData.pid) obj = obj.parent; return obj?.userData.pid; };
   el.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0 || walk) return;
+    if (e.button !== 0 || walk || VIEWER) return;
     down = { x: e.clientX, y: e.clientY };
     setRay(e);
     const hits = ray.intersectObjects([...groups.values()], true);

@@ -1,5 +1,8 @@
 // Central project state. All lengths are in centimetres.
 
+// A shared view-only link (#v=…) opens the plan read-only: nothing can be moved and nothing is saved.
+export const VIEWER = location.hash.startsWith('#v=');
+
 export const PRESETS = [
   { kind: 'roundTable', name: 'Round table Ø180', w: 180, d: 180, h: 76, seats: 12, color: '#f4efe6' },
   { kind: 'roundTable', name: 'Round table Ø150', w: 150, d: 150, h: 76, seats: 10, color: '#f4efe6' },
@@ -163,4 +166,22 @@ export function addFurniture(preset, qty = 1) {
   state.furniture.push(f);
   emit('furniture');
   return f;
+}
+
+// ---------- view-only share links: the plan packed into the URL ----------
+const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+async function pipe(bytes, stream) { return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer()); }
+export async function packShare() {
+  // uploaded pictures (venue screenshot, mood images, photo textures) are left out to keep the link short
+  const strip = (v) => (typeof v === 'string' && v.startsWith('data:') ? undefined : Array.isArray(v) ? v.map(strip) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, strip(x)])) : v);
+  const data = strip({ eventName: state.eventName, brief: state.brief, venue: state.venue && { ...state.venue, image: undefined }, mood: state.mood, furniture: state.furniture, placed: state.placed });
+  const raw = new TextEncoder().encode(JSON.stringify(data));
+  let out = '';
+  const z = await pipe(raw, new CompressionStream('deflate-raw'));
+  for (let i = 0; i < z.length; i += 8192) out += String.fromCharCode(...z.subarray(i, i + 8192));
+  return `${location.origin}${location.pathname}#v=${btoa(out).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
+}
+export async function unpackShare(hash = location.hash) {
+  const z = unb64u(hash.slice(3));
+  return JSON.parse(new TextDecoder().decode(await pipe(z, new DecompressionStream('deflate-raw'))));
 }

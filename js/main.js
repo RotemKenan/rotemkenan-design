@@ -1,6 +1,6 @@
 import {
   state, PRESETS, INVENTORY, onChange, emit, addFurniture, serialize, load, itemOf,
-  newProject, saveProject, listProjects, openProject, deleteProject, restoreLastProject, newId,
+  VIEWER, packShare, unpackShare, newProject, saveProject, listProjects, openProject, deleteProject, restoreLastProject, newId,
   commitHistory, undo, redo, canUndo, canRedo, saveInventory,
 } from './state.js';
 import { parseVenue, demoVenue, exportDxf, looksLikeDxf, VENUE_LIBRARY } from './dxf.js';
@@ -282,7 +282,7 @@ function renderInspector() {
       <label>${t('y')}<input type="number" data-k="y" value="${Math.round(p.y)}"></label>
       <label>${t('rotation')}<input type="number" data-k="rot" step="15" value="${Math.round(p.rot)}"></label>
       <label>${t('label')}<input type="text" data-k="label" value="${esc(p.label || '')}"></label>
-      ${!it.invId && (it.seats || ['roundTable', 'rectTable'].includes(it.kind)) ? `<label>${t('seat')}<input type="number" data-seats value="${it.seats}" min="0"></label>` : ''}
+      <label>${t('seatsHere')}<input type="number" data-seats value="${seatsOf(it)}" min="0"></label>
       <label class="chk"><input type="checkbox" data-lock ${p.locked ? 'checked' : ''}> ${t('lock')}</label>
       <div class="row"><button data-a="rl">${t('rotateL')}</button><button data-a="rr">${t('rotateR')}</button></div>
       <div class="row"><button data-a="dup">${t('duplicate')}</button><button data-a="del" class="danger">${t('delete')}</button></div>`;
@@ -295,7 +295,17 @@ function renderInspector() {
       if (inv) { inv[k] = v; saveInventory(); document.dispatchEvent(new CustomEvent('inventory-changed')); }
       emit('furniture'); toast(t('sizeUpdated'));
     }));
-    const seats = box.querySelector('[data-seats]'); if (seats) seats.onchange = () => { it.seats = Math.max(0, +seats.value); emit('furniture'); };
+    // Seats: tables built here get that many chairs drawn; any other piece just counts that many people (saved as its default)
+    box.querySelector('[data-seats]').onchange = (e) => {
+      const v = Math.max(0, Math.round(+e.target.value || 0));
+      if (!it.invId && ['roundTable', 'rectTable'].includes(it.kind)) it.seats = v;
+      else {
+        for (const f of state.furniture) if (f === it || (it.invId && f.invId === it.invId)) f.seatCount = v;
+        const inv = INVENTORY.find((x) => x.id === it.invId);
+        if (inv) { inv.seatCount = v; saveInventory(); }
+      }
+      emit('furniture'); toast(t('seatsUpdated', { n: v }));
+    };
     box.querySelector('[data-lock]').onchange = (e) => { p.locked = e.target.checked; emit('placed'); };
   }
   box.querySelector('[data-a=rl]').onclick = () => plan.rotateSelection(-15);
@@ -461,6 +471,7 @@ function refreshAll() {
 // ---------- saving ----------
 let saveTimer;
 function autosave() {
+  if (VIEWER) return;
   $('saveState').textContent = t('saving');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
@@ -506,6 +517,13 @@ renderGallery();
 initInventory(toast);
 initMood(toast);
 (async () => {
+  if (VIEWER) {
+    document.body.classList.add('viewer');
+    try { load(await unpackShare()); } catch { toast(t('shareBroken')); }
+    showView('split');
+    new ResizeObserver(() => { plan.resize(); plan.fit(); }).observe($('planCanvas'));
+    setTimeout(() => { plan.resize(); plan.fit(); view3d.resize(); }, 600); return;
+  }
   const ok = await restoreLastProject().catch(() => false);
   if (!ok) newProject(t('newEventName'));
   await saveProject().catch(() => {});
@@ -534,3 +552,10 @@ import('./suggest.js').then(({ suggestSeats }) => {
   $('ghostAll').onclick = () => accept([...current]);
   $('ghostClear').onclick = () => { current = []; setG([]); };
 });
+
+// ---------- view-only share link ----------
+$('shareLink').onclick = async () => {
+  closeMenu();
+  const url = await packShare();
+  try { await navigator.clipboard.writeText(url); toast(t('shareCopied')); } catch { prompt(t('shareCopy'), url); }
+};

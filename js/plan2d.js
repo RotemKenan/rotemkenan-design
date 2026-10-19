@@ -1,5 +1,5 @@
 // Interactive 2D plan: venue lines + furniture, drag / rotate / duplicate / delete.
-import { state, emit, itemOf, newId, isRound } from './state.js';
+import { state, emit, itemOf, newId, isRound, VIEWER } from './state.js';
 import { seatsOf } from './match.js';
 import { venueBounds, visibleSegments, footprint, itemOutline } from './dxf.js';
 
@@ -424,7 +424,7 @@ canvas.addEventListener('pointerdown', (e) => {
     return;
   }
   canvas.setPointerCapture(e.pointerId);
-  if (e.button === 1 || e.button === 2 || spaceDown) { drag = { mode: 'pan', sx: e.clientX, sy: e.clientY, ox: view.ox, oy: view.oy }; return; }
+  if (VIEWER || e.button === 1 || e.button === 2 || spaceDown) { drag = { mode: 'pan', sx: e.clientX, sy: e.clientY, ox: view.ox, oy: view.oy }; return; }
   const sel = selection();
   if (sel.length === 1) {
     const it = itemOf(sel[0]), h = rotateHandle(sel[0], it);
@@ -508,6 +508,7 @@ window.addEventListener('keyup', (e) => { if (e.code === 'Space') spaceDown = fa
 // Keyboard shortcuts work in the plan, 3D and split views.
 let clipboard = [];
 window.addEventListener('keydown', (e) => {
+  if (VIEWER) return;
   if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName)) return;
   if (!document.querySelector('#planView.active, #threeView.active')) return;
   const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
