@@ -26,6 +26,9 @@ function download(name, content, type) {
   a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
+// Default event names follow the current language until the user types their own.
+const DEFAULT_NAMES = ['New event', 'אירוע חדש', ''];
+const eventLabel = (name) => (DEFAULT_NAMES.includes(name || '') ? t('newEventName') : name);
 const fileBase = () => (state.eventName || 'event').replace(/[\\/:*?"<>|]/g, '').trim() || 'event';
 plan.setNamer(itemName);
 
@@ -56,7 +59,7 @@ async function renderEventSelect() {
   const all = await listProjects().catch(() => []);
   const cur = all.find((p) => p.id === state.id);
   if (cur) Object.assign(cur, { eventName: state.eventName, brief: state.brief }); else all.unshift({ id: state.id, eventName: state.eventName, brief: state.brief });
-  $('eventSelect').innerHTML = all.map((p) => `<option value="${p.id}" ${p.id === state.id ? 'selected' : ''}>${esc(p.eventName || t('untitled'))}${p.brief?.date ? ' · ' + p.brief.date : ''}</option>`).join('');
+  $('eventSelect').innerHTML = all.map((p) => `<option value="${p.id}" ${p.id === state.id ? 'selected' : ''}>${esc(eventLabel(p.eventName))}${p.brief?.date ? ' · ' + p.brief.date : ''}</option>`).join('');
 }
 $('eventSelect').onchange = async (e) => { await saveProject(); await openProject(e.target.value); afterOpen(); toast(t('opened')); };
 $('newEvent').onclick = async () => { await saveProject(); newProject(t('newEventName')); await saveProject(); afterOpen(); showView('mood'); $('eventName').select(); };
@@ -81,7 +84,7 @@ const briefFields = { briefClient: 'client', briefType: 'type', briefDate: 'date
 for (const [id, k] of Object.entries(briefFields)) $(id).addEventListener('change', (e) => { state.brief[k] = k === 'guests' ? +e.target.value : e.target.value; emit('brief'); });
 $('eventName').addEventListener('input', (e) => { state.eventName = e.target.value; emit('brief'); });
 function renderBrief() {
-  $('eventName').value = state.eventName || '';
+  $('eventName').value = DEFAULT_NAMES.includes(state.eventName || '') ? '' : state.eventName;
   for (const [id, k] of Object.entries(briefFields)) $(id).value = state.brief[k] || '';
   $('briefType').value = state.brief.type || 'wedding';
 }

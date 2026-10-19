@@ -84,8 +84,8 @@ function drawItem(p, it, selected, clash) {
     }
   }
 
-  ctx.fillStyle = it.color; ctx.strokeStyle = clash ? '#d23c2a' : selected ? '#c27a3a' : '#5a514a'; ctx.lineWidth = selected || clash ? 2.5 : 1;
-  if (selected) { ctx.shadowColor = 'rgba(194,122,58,.55)'; ctx.shadowBlur = 10; }
+  ctx.fillStyle = it.color; ctx.strokeStyle = clash ? '#d23c2a' : selected ? '#b07a3e' : '#5a514a'; ctx.lineWidth = selected || clash ? 2.5 : 1;
+  if (selected) { ctx.shadowColor = 'rgba(176,122,62,.55)'; ctx.shadowBlur = 10; }
   ctx.beginPath();
   if (it.kind === 'curvedSofa') curvedPath(ctx, it, view.scale);
   else if (round) ctx.arc(0, 0, w / 2, 0, Math.PI * 2); else ctx.rect(-w / 2, -d / 2, w, d);
@@ -129,9 +129,9 @@ function drawOverlay() {
   if (sel.length === 1) { // rotate knob
     const it = itemOf(sel[0]); if (it) {
       const c = toScreen(sel[0].x, sel[0].y), h = rotateHandle(sel[0], it);
-      ctx.strokeStyle = '#c27a3a'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(h.x, h.y); ctx.stroke();
+      ctx.strokeStyle = '#b07a3e'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(h.x, h.y); ctx.stroke();
       ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(h.x, h.y, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#c27a3a'; ctx.font = '10px Inter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('↻', h.x, h.y + 1);
+      ctx.fillStyle = '#b07a3e'; ctx.font = '10px Inter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('↻', h.x, h.y + 1);
     }
   }
   if (live && state.venue) { // distance to the nearest wall while dragging
@@ -144,7 +144,7 @@ function drawOverlay() {
   }
   if (marquee) {
     const a = toScreen(marquee.x0, marquee.y0), b = toScreen(marquee.x1, marquee.y1);
-    ctx.fillStyle = 'rgba(194,122,58,.08)'; ctx.strokeStyle = '#c27a3a'; ctx.setLineDash([5, 4]);
+    ctx.fillStyle = 'rgba(176,122,62,.08)'; ctx.strokeStyle = '#b07a3e'; ctx.setLineDash([5, 4]);
     ctx.fillRect(a.x, a.y, b.x - a.x, b.y - a.y); ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y); ctx.setLineDash([]);
   }
   if (hover && !drag) { const it = itemOf(hover); if (it) { const c = toScreen(hover.x, hover.y); label(c.x, c.y - (Math.max(it.w, it.d) / 2) * view.scale - 14, `${tName(it)} · ${it.w}×${it.d}`, '#1b1918'); } }

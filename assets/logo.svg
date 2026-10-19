@@ -1,9 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Event Studio by Rotem Kenan">
-  <!-- An open arch (venue doorway / chuppah) framing a single candle flame: the moment a guest first walks in. -->
-  <rect width="64" height="64" rx="14" fill="#1b1918"/>
-  <path d="M17 50 V30 a15 15 0 0 1 30 0 V50" fill="none" stroke="#e9dfcf" stroke-width="2.6" stroke-linecap="round"/>
-  <path d="M22 50 V31 a10 10 0 0 1 20 0 V50" fill="none" stroke="#b5532c" stroke-width="1.6" stroke-linecap="round"/>
-  <path d="M32 27 c-3.2 4 -3.6 7.2 0 9.6 c3.6 -2.4 3.2 -5.6 0 -9.6z" fill="#e8a24a"/>
-  <rect x="30.4" y="37" width="3.2" height="8" rx="1" fill="#e9dfcf"/>
-  <path d="M13 50 H51" stroke="#e9dfcf" stroke-width="2.6" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Event Studio by Rotem Kenan">
+  <!-- Velvet Night mark: a round table seen from above with ten chairs — the plan itself, as a seal. -->
+  <circle cx="48" cy="48" r="47" fill="#1f1416"/>
+  <circle cx="48" cy="48" r="44" fill="none" stroke="#d9b98c" stroke-width="1.2"/>
+  <circle cx="48" cy="48" r="17" fill="none" stroke="#d9b98c" stroke-width="2"/>
+  <g fill="#d9b98c">
+    <circle cx="48" cy="20" r="3.4"/><circle cx="64.5" cy="25.4" r="3.4"/><circle cx="74.6" cy="39.3" r="3.4"/><circle cx="74.6" cy="56.7" r="3.4"/><circle cx="64.5" cy="70.6" r="3.4"/>
+    <circle cx="48" cy="76" r="3.4"/><circle cx="31.5" cy="70.6" r="3.4"/><circle cx="21.4" cy="56.7" r="3.4"/><circle cx="21.4" cy="39.3" r="3.4"/><circle cx="31.5" cy="25.4" r="3.4"/>
+  </g>
+  <text x="48" y="54" text-anchor="middle" font-family="Frank Ruhl Libre, Georgia, serif" font-size="17" fill="#f1e6da">RK</text>
 </svg>
