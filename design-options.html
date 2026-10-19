@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Event Studio · Design options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Bellefair&family=Heebo:wght@300;400;500;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Assistant:wght@400;600;700&family=Rubik:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Heebo, system-ui, sans-serif; background: #ecebe8; color: #222; }
+  .intro { max-width: 980px; margin: 0 auto; padding: 32px 16px 8px; }
+  .intro h1 { font-weight: 500; font-size: 26px; margin: 0 0 6px; }
+  .intro p { color: #666; margin: 0 0 4px; line-height: 1.5; }
+  .jump { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .jump a { text-decoration: none; padding: 8px 14px; border-radius: 999px; background: #fff; color: #222; border: 1px solid #ddd; font-size: 14px; }
+  .opt { max-width: 980px; margin: 24px auto; padding: 0 16px; }
+  .card { border-radius: 22px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,.08); }
+  .hero { padding: 36px 28px 28px; display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center; }
+  .hero svg.mark { width: 92px; height: 92px; }
+  .letter { font-size: 12px; letter-spacing: .25em; text-transform: uppercase; opacity: .7; margin: 0 0 6px; }
+  .word { margin: 0; line-height: 1; }
+  .by { margin: 6px 0 0; }
+  .tag { margin: 12px 0 0; opacity: .8; font-size: 15px; line-height: 1.5; }
+  .body { padding: 24px 28px 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+  h3 { margin: 0 0 10px; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; opacity: .65; font-weight: 500; }
+  .sw { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .sw div { border-radius: 12px; height: 64px; display: flex; align-items: flex-end; padding: 6px; font-size: 10px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+  .spec p { margin: 0 0 6px; }
+  .he { direction: rtl; text-align: right; }
+  .why { line-height: 1.6; font-size: 14px; margin: 0; }
+  .icons { display: flex; gap: 14px; align-items: center; margin-top: 14px; }
+  .icons svg { border-radius: 22%; }
+  /* mini app preview */
+  .mock { grid-column: 1 / -1; border-radius: 16px; overflow: hidden; border: 1px solid rgba(0,0,0,.08); }
+  .mbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; flex-wrap: wrap; }
+  .mbar .t { display: flex; gap: 4px; margin-inline-start: auto; padding: 3px; border-radius: 10px; }
+  .mbar .t span { padding: 6px 10px; border-radius: 8px; font-size: 13px; }
+  .mrow { display: grid; grid-template-columns: 220px 1fr; min-height: 230px; }
+  .mside { padding: 14px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+  .mside .f { border-radius: 8px; padding: 8px 10px; }
+  .mside .btn { border-radius: 10px; padding: 10px; text-align: center; font-weight: 500; }
+  .mplan { position: relative; }
+  .mplan svg { width: 100%; height: 100%; display: block; }
+  .pick { text-align: center; padding: 18px; font-size: 15px; }
+  @media (max-width: 720px) {
+    .hero { grid-template-columns: 1fr; text-align: start; }
+    .body { grid-template-columns: 1fr; }
+    .mrow { grid-template-columns: 1fr; }
+    .mplan { height: 200px; }
+  }
+
+  /* ===== A · Atelier ===== */
+  #a .card { background: #faf7f2; color: #2b2724; }
+  #a .hero { background: #f3ede4; }
+  #a .word { font-family: Bellefair, serif; font-size: 52px; font-weight: 400; letter-spacing: .01em; }
+  #a .by { font-family: Bellefair, serif; font-size: 20px; color: #b4532a; }
+  #a .h1s { font-family: Bellefair, serif; font-size: 30px; }
+  #a .bodys { font-family: Heebo, sans-serif; font-size: 15px; font-weight: 400; line-height: 1.55; }
+  #a .mbar { background: #fff; border-bottom: 1px solid #ece4d8; }
+  #a .mbar .t { background: #f3ede4; }
+  #a .mbar .t span.on { background: #2b2724; color: #faf7f2; }
+  #a .mside { background: #faf7f2; font-family: Heebo; }
+  #a .mside .f { background: #fff; border: 1px solid #e6dccd; }
+  #a .mside .btn { background: #b4532a; color: #fff; }
+  #a .mplan { background: #fff; }
+
+  /* ===== B · Velvet Night ===== */
+  #b .card { background: #1f1416; color: #f1e6da; }
+  #b .hero { background: radial-gradient(120% 140% at 0% 0%, #3a1f24, #1f1416 60%); }
+  #b .word { font-family: "Frank Ruhl Libre", serif; font-size: 50px; font-weight: 500; }
+  #b .by { font-family: "Frank Ruhl Libre", serif; font-size: 19px; color: #d9b98c; font-style: italic; }
+  #b .h1s { font-family: "Frank Ruhl Libre", serif; font-size: 30px; font-weight: 500; }
+  #b .bodys { font-family: Assistant, sans-serif; font-size: 16px; line-height: 1.55; }
+  #b .body { background: #261a1c; }
+  #b .mbar { background: #1f1416; border-bottom: 1px solid #3a2a2c; color: #f1e6da; }
+  #b .mbar .t { background: #2e2023; }
+  #b .mbar .t span.on { background: #d9b98c; color: #1f1416; }
+  #b .mside { background: #2a1d20; font-family: Assistant; color: #f1e6da; }
+  #b .mside .f { background: #33242a; border: 1px solid #4a3438; }
+  #b .mside .btn { background: #d9b98c; color: #1f1416; }
+  #b .mplan { background: #f6efe6; }
+
+  /* ===== C · Garden Modern ===== */
+  #c .card { background: #f6f7f2; color: #22281f; }
+  #c .hero { background: #e4e9dc; }
+  #c .word { font-family: Rubik, sans-serif; font-size: 46px; font-weight: 500; letter-spacing: -.01em; }
+  #c .by { font-family: Rubik, sans-serif; font-size: 17px; font-weight: 400; color: #5e6e57; }
+  #c .h1s { font-family: Rubik, sans-serif; font-size: 28px; font-weight: 500; }
+  #c .bodys { font-family: Rubik, sans-serif; font-size: 15px; font-weight: 400; line-height: 1.6; }
+  #c .mbar { background: #fff; border-bottom: 1px solid #dde3d4; }
+  #c .mbar .t { background: #eef1e8; }
+  #c .mbar .t span.on { background: #5e6e57; color: #fff; }
+  #c .mside { background: #f6f7f2; font-family: Rubik; }
+  #c .mside .f { background: #fff; border: 1px solid #d8dfce; }
+  #c .mside .btn { background: #22281f; color: #fff; }
+  #c .mplan { background: #fff; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Event Studio — three directions</h1>
+  <p>Each option has its own logo, colours and fonts. Every font works in Hebrew and English and is easy to read on a phone.</p>
+  <p class="he">לכל כיוון לוגו, צבעים ופונטים משלו. כל הפונטים תומכים בעברית ובאנגלית וקריאים בנייד. בחרי A, B או C.</p>
+  <div class="jump"><a href="#a">A · Atelier</a><a href="#b">B · Velvet Night</a><a href="#c">C · Garden Modern</a></div>
+</div>
+
+<!-- ================= A ================= -->
+<section class="opt" id="a">
+  <div class="card">
+    <div class="hero">
+      <!-- Logo A: a single continuous line drawing an arch that becomes an "R" — a doorway into the event -->
+      <svg class="mark" viewBox="0 0 96 96" aria-hidden="true">
+        <circle cx="48" cy="48" r="46" fill="none" stroke="#2b2724" stroke-width="1.2"/>
+        <path d="M30 72 V44 a18 18 0 0 1 36 0 V72" fill="none" stroke="#2b2724" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M40 72 V48 h9 a8 8 0 0 1 0 16 h-9 M49 64 L58 72" fill="none" stroke="#b4532a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <div>
+        <p class="letter">Option A · Atelier</p>
+        <h2 class="word">Event Studio</h2>
+        <p class="by">by Rotem Kenan</p>
+        <p class="tag">Quiet, editorial and warm, like a design studio's sketchbook. Lots of air, so your mood images and the 3D renders stay the focus.</p>
+      </div>
+    </div>
+    <div class="body">
+      <div>
+        <h3>Palette</h3>
+        <div class="sw">
+          <div style="background:#faf7f2">Ivory</div><div style="background:#e9e1d4">Sand</div><div style="background:#cfa98a">Clay</div><div style="background:#b4532a;color:#fff">Terracotta</div><div style="background:#2b2724;color:#fff">Ink</div>
+        </div>
+        <div class="icons">
+          <svg width="56" height="56" viewBox="0 0 96 96"><rect width="96" height="96" fill="#2b2724"/><path d="M30 72 V44 a18 18 0 0 1 36 0 V72" fill="none" stroke="#faf7f2" stroke-width="3" stroke-linecap="round"/><path d="M40 72 V48 h9 a8 8 0 0 1 0 16 h-9 M49 64 L58 72" fill="none" stroke="#e07a4c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span style="font-size:13px;opacity:.7">App icon</span>
+        </div>
+      </div>
+      <div class="spec">
+        <h3>Fonts — Bellefair + Heebo</h3>
+        <p class="h1s">Noa &amp; Daniel · Garden Wedding</p>
+        <p class="h1s he">נועה ודניאל · חתונה בגן</p>
+        <p class="bodys">220 guests · 18 round tables · warm candlelight, linen and terracotta.</p>
+        <p class="bodys he">220 אורחים · 18 שולחנות עגולים · אור נרות חמים, פשתן וטרקוטה.</p>
+        <p class="why">Bellefair is a delicate, high-contrast serif with matching Hebrew letters, so headings in both languages look like one family. Heebo is one of the clearest Hebrew/English text fonts.</p>
+      </div>
+      <div class="mock">
+        <div class="mbar"><svg width="28" height="28" viewBox="0 0 96 96"><path d="M30 72 V44 a18 18 0 0 1 36 0 V72" fill="none" stroke="#2b2724" stroke-width="5" stroke-linecap="round"/><path d="M40 72 V48 h9 a8 8 0 0 1 0 16 h-9 M49 64 L58 72" fill="none" stroke="#b4532a" stroke-width="5" stroke-linecap="round"/></svg><b style="font-family:Bellefair;font-size:20px;font-weight:400">Event Studio</b><div class="t"><span>Mood</span><span class="on">Plan</span><span>3D</span><span>Present</span></div></div>
+        <div class="mrow">
+          <div class="mside"><b style="font-family:Bellefair;font-size:19px;font-weight:400">Event details</b><div class="f">Noa &amp; Daniel</div><div class="f">220 guests</div><div class="btn">✨ Suggest a layout</div></div>
+          <div class="mplan"><svg viewBox="0 0 400 230" preserveAspectRatio="xMidYMid slice"><rect x="20" y="20" width="360" height="190" fill="none" stroke="#2b2724" stroke-width="1.5"/><rect x="160" y="28" width="80" height="34" fill="#2b2724"/><rect x="150" y="70" width="100" height="70" fill="#e9e1d4" stroke="#cfa98a" stroke-dasharray="4 3"/><g fill="#faf7f2" stroke="#2b2724"><circle cx="70" cy="80" r="18"/><circle cx="70" cy="150" r="18"/><circle cx="120" cy="115" r="18"/><circle cx="330" cy="80" r="18"/><circle cx="330" cy="150" r="18"/><circle cx="280" cy="115" r="18"/><circle cx="200" cy="180" r="18" stroke="#b4532a" stroke-width="2.5"/></g><path d="M175 205 a30 30 0 0 1 50 0" fill="none" stroke="#b4532a" stroke-width="9"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= B ================= -->
+<section class="opt" id="b">
+  <div class="card">
+    <div class="hero">
+      <!-- Logo B: a round table seen from above, ten chairs around it — the plan itself as a jewel / seal -->
+      <svg class="mark" viewBox="0 0 96 96" aria-hidden="true">
+        <circle cx="48" cy="48" r="46" fill="none" stroke="#d9b98c" stroke-width="1"/>
+        <circle cx="48" cy="48" r="17" fill="none" stroke="#d9b98c" stroke-width="2"/>
+        <g fill="#d9b98c">
+          <circle cx="48" cy="20" r="3.4"/><circle cx="64.5" cy="25.4" r="3.4"/><circle cx="74.6" cy="39.3" r="3.4"/><circle cx="74.6" cy="56.7" r="3.4"/><circle cx="64.5" cy="70.6" r="3.4"/>
+          <circle cx="48" cy="76" r="3.4"/><circle cx="31.5" cy="70.6" r="3.4"/><circle cx="21.4" cy="56.7" r="3.4"/><circle cx="21.4" cy="39.3" r="3.4"/><circle cx="31.5" cy="25.4" r="3.4"/>
+        </g>
+        <text x="48" y="54" text-anchor="middle" font-family="Frank Ruhl Libre, serif" font-size="17" fill="#f1e6da">RK</text>
+      </svg>
+      <div>
+        <p class="letter">Option B · Velvet Night</p>
+        <h2 class="word">Event Studio</h2>
+        <p class="by">by Rotem Kenan</p>
+        <p class="tag">Dark and luxurious, like an evening event: deep wine, velvet and champagne gold. The logo is a round table seen from above, the way you see it in the plan.</p>
+      </div>
+    </div>
+    <div class="body">
+      <div>
+        <h3>Palette</h3>
+        <div class="sw">
+          <div style="background:#1f1416;color:#f1e6da">Night</div><div style="background:#5a1f2a;color:#fff">Wine</div><div style="background:#c98b7a">Rosé</div><div style="background:#d9b98c">Champagne</div><div style="background:#f6efe6">Cream</div>
+        </div>
+        <div class="icons">
+          <svg width="56" height="56" viewBox="0 0 96 96"><rect width="96" height="96" fill="#5a1f2a"/><circle cx="48" cy="48" r="17" fill="none" stroke="#d9b98c" stroke-width="3"/><g fill="#d9b98c"><circle cx="48" cy="20" r="4"/><circle cx="64.5" cy="25.4" r="4"/><circle cx="74.6" cy="39.3" r="4"/><circle cx="74.6" cy="56.7" r="4"/><circle cx="64.5" cy="70.6" r="4"/><circle cx="48" cy="76" r="4"/><circle cx="31.5" cy="70.6" r="4"/><circle cx="21.4" cy="56.7" r="4"/><circle cx="21.4" cy="39.3" r="4"/><circle cx="31.5" cy="25.4" r="4"/></g></svg>
+          <span style="font-size:13px;opacity:.7">App icon</span>
+        </div>
+      </div>
+      <div class="spec">
+        <h3>Fonts — Frank Ruhl Libre + Assistant</h3>
+        <p class="h1s">Noa &amp; Daniel · Garden Wedding</p>
+        <p class="h1s he">נועה ודניאל · חתונה בגן</p>
+        <p class="bodys">220 guests · 18 round tables · warm candlelight, linen and terracotta.</p>
+        <p class="bodys he">220 אורחים · 18 שולחנות עגולים · אור נרות חמים, פשתן וטרקוטה.</p>
+        <p class="why">Frank Ruhl Libre is the classic Israeli book serif, elegant and very legible in Hebrew. Assistant is a friendly, open text font that reads well at small sizes, even on dark backgrounds.</p>
+      </div>
+      <div class="mock">
+        <div class="mbar"><svg width="28" height="28" viewBox="0 0 96 96"><circle cx="48" cy="48" r="17" fill="none" stroke="#d9b98c" stroke-width="5"/><g fill="#d9b98c"><circle cx="48" cy="20" r="6"/><circle cx="74.6" cy="39.3" r="6"/><circle cx="64.5" cy="70.6" r="6"/><circle cx="31.5" cy="70.6" r="6"/><circle cx="21.4" cy="39.3" r="6"/></g></svg><b style="font-family:'Frank Ruhl Libre';font-size:20px;font-weight:500">Event Studio</b><div class="t"><span>Mood</span><span class="on">Plan</span><span>3D</span><span>Present</span></div></div>
+        <div class="mrow">
+          <div class="mside"><b style="font-family:'Frank Ruhl Libre';font-size:19px;font-weight:500">Event details</b><div class="f">Noa &amp; Daniel</div><div class="f">220 guests</div><div class="btn">✨ Suggest a layout</div></div>
+          <div class="mplan"><svg viewBox="0 0 400 230" preserveAspectRatio="xMidYMid slice"><rect x="20" y="20" width="360" height="190" fill="none" stroke="#1f1416" stroke-width="1.5"/><rect x="160" y="28" width="80" height="34" fill="#5a1f2a"/><rect x="150" y="70" width="100" height="70" fill="#efe3d3" stroke="#c98b7a" stroke-dasharray="4 3"/><g fill="#fff" stroke="#1f1416"><circle cx="70" cy="80" r="18"/><circle cx="70" cy="150" r="18"/><circle cx="120" cy="115" r="18"/><circle cx="330" cy="80" r="18"/><circle cx="330" cy="150" r="18"/><circle cx="280" cy="115" r="18"/><circle cx="200" cy="180" r="18" stroke="#c9a25a" stroke-width="2.5"/></g><path d="M175 205 a30 30 0 0 1 50 0" fill="none" stroke="#5a1f2a" stroke-width="9"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= C ================= -->
+<section class="opt" id="c">
+  <div class="card">
+    <div class="hero">
+      <!-- Logo C: a floor-plan corner (two walls) with a sprig growing inside — designing a space that feels alive -->
+      <svg class="mark" viewBox="0 0 96 96" aria-hidden="true">
+        <rect x="2" y="2" width="92" height="92" rx="24" fill="#5e6e57"/>
+        <path d="M26 26 V70 H70" fill="none" stroke="#f6f7f2" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M44 62 C44 48 50 38 62 32" fill="none" stroke="#f6f7f2" stroke-width="3" stroke-linecap="round"/>
+        <path d="M50 46 c6 -1 10 2 11 7 c-6 1 -10 -2 -11 -7z" fill="#d8c896"/>
+        <path d="M54 38 c-1 -6 3 -10 8 -10 c1 6 -3 10 -8 10z" fill="#d8c896"/>
+      </svg>
+      <div>
+        <p class="letter">Option C · Garden Modern</p>
+        <h2 class="word">Event Studio</h2>
+        <p class="by">by Rotem Kenan</p>
+        <p class="tag">Fresh, clean and contemporary: sage, olive and brass. The clearest to read of the three. The logo is a floor-plan corner with a sprig growing inside.</p>
+      </div>
+    </div>
+    <div class="body">
+      <div>
+        <h3>Palette</h3>
+        <div class="sw">
+          <div style="background:#f6f7f2">Linen</div><div style="background:#cfd8c3">Sage</div><div style="background:#5e6e57;color:#fff">Olive</div><div style="background:#d8c896">Brass</div><div style="background:#22281f;color:#fff">Forest</div>
+        </div>
+        <div class="icons">
+          <svg width="56" height="56" viewBox="0 0 96 96"><rect width="96" height="96" fill="#5e6e57"/><path d="M26 26 V70 H70" fill="none" stroke="#f6f7f2" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M44 62 C44 48 50 38 62 32" fill="none" stroke="#f6f7f2" stroke-width="4" stroke-linecap="round"/><path d="M50 46 c6 -1 10 2 11 7 c-6 1 -10 -2 -11 -7z" fill="#d8c896"/><path d="M54 38 c-1 -6 3 -10 8 -10 c1 6 -3 10 -8 10z" fill="#d8c896"/></svg>
+          <span style="font-size:13px;opacity:.7">App icon</span>
+        </div>
+      </div>
+      <div class="spec">
+        <h3>Font — Rubik (one family)</h3>
+        <p class="h1s">Noa &amp; Daniel · Garden Wedding</p>
+        <p class="h1s he">נועה ודניאל · חתונה בגן</p>
+        <p class="bodys">220 guests · 18 round tables · warm candlelight, linen and terracotta.</p>
+        <p class="bodys he">220 אורחים · 18 שולחנות עגולים · אור נרות חמים, פשתן וטרקוטה.</p>
+        <p class="why">Rubik was designed in Israel for Hebrew and Latin together. Its soft, rounded letters are very easy to read on phones, and using one family keeps everything calm and consistent.</p>
+      </div>
+      <div class="mock">
+        <div class="mbar"><svg width="28" height="28" viewBox="0 0 96 96"><rect width="96" height="96" rx="24" fill="#5e6e57"/><path d="M26 26 V70 H70" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/><path d="M44 62 C44 48 50 38 62 32" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/></svg><b style="font-family:Rubik;font-size:18px;font-weight:500">Event Studio</b><div class="t"><span>Mood</span><span class="on">Plan</span><span>3D</span><span>Present</span></div></div>
+        <div class="mrow">
+          <div class="mside"><b style="font-family:Rubik;font-size:17px;font-weight:500">Event details</b><div class="f">Noa &amp; Daniel</div><div class="f">220 guests</div><div class="btn">✨ Suggest a layout</div></div>
+          <div class="mplan"><svg viewBox="0 0 400 230" preserveAspectRatio="xMidYMid slice"><rect x="20" y="20" width="360" height="190" rx="4" fill="none" stroke="#22281f" stroke-width="1.5"/><rect x="160" y="28" width="80" height="34" rx="4" fill="#22281f"/><rect x="150" y="70" width="100" height="70" rx="4" fill="#eef1e8" stroke="#5e6e57" stroke-dasharray="4 3"/><g fill="#fff" stroke="#22281f"><circle cx="70" cy="80" r="18"/><circle cx="70" cy="150" r="18"/><circle cx="120" cy="115" r="18"/><circle cx="330" cy="80" r="18"/><circle cx="330" cy="150" r="18"/><circle cx="280" cy="115" r="18"/><circle cx="200" cy="180" r="18" stroke="#5e6e57" stroke-width="2.5"/></g><path d="M175 205 a30 30 0 0 1 50 0" fill="none" stroke="#5e6e57" stroke-width="9"/></svg></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<p class="pick">Tell me A, B or C, or mix them (e.g. “logo B with the fonts of C”).<br><span class="he" style="display:block">ספרי לי A, B או C — או שילוב, למשל “הלוגו של B עם הפונט של C”.</span></p>
+</body>
+</html>
