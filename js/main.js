@@ -1,10 +1,11 @@
 import {
   state, PRESETS, INVENTORY, onChange, emit, addFurniture, serialize, load, itemOf,
   newProject, saveProject, listProjects, openProject, deleteProject, restoreLastProject, newId,
-  commitHistory, undo, redo, canUndo, canRedo,
+  commitHistory, undo, redo, canUndo, canRedo, saveInventory,
 } from './state.js';
 import { parseVenue, demoVenue, exportDxf, looksLikeDxf, VENUE_LIBRARY } from './dxf.js';
 import { blobToDataUrl } from './pptx.js';
+import { traceImage, strokesToSegments, dimensionsFor, readDimensions, toMetres } from './trace.js';
 import { suggestLayout } from './layout.js';
 import * as plan from './plan2d.js';
 import * as view3d from './view3d.js';
@@ -140,6 +141,7 @@ $('venueLibrary').addEventListener('change', async (e) => {
   try { setVenueFromDxf(await (await fetch(v.file)).text(), getLang() === 'he' ? v.he : v.en); } catch (err) { toast(t('dxfError', { msg: err.message })); }
 });
 $('demoVenue').addEventListener('click', () => {
+  if (state.venue && !confirm(t('confirmDemo'))) return;
   state.venue = demoVenue(); emit('venue'); plan.fit();
   if (!state.furniture.length) {
     addFurniture(PRESETS[0], 18); addFurniture(PRESETS[4], 1); addFurniture(PRESETS[10], 1);
@@ -151,6 +153,7 @@ $('demoVenue').addEventListener('click', () => {
 });
 $('wallHeight').addEventListener('change', () => { if (state.venue) { state.venue.wallHeight = +$('wallHeight').value; emit('venue'); } });
 function renderLayers() {
+  $('demoVenue').classList.toggle('hidden', !!state.venue);
   $('scaleBtn').classList.toggle('hidden', !state.venue?.image);
   const box = $('layerList'); box.innerHTML = '';
   if (!state.venue) return;
@@ -253,7 +256,13 @@ function renderInspector() {
       <div class="row"><button data-a="dup">${t('duplicate')}</button><button data-a="del" class="danger">${t('delete')}</button></div>`;
   } else {
     const p = sel[0], it = itemOf(p);
-    box.innerHTML = `${it.photo ? `<img src="${it.photo}" alt="">` : ''}<strong>${esc(itemName(it))}</strong><span class="hint">${it.w}×${it.d}×${it.h} cm</span>
+    box.innerHTML = `${it.photo ? `<img src="${it.photo}" alt="">` : ''}<strong>${esc(itemName(it))}</strong>
+      <div class="size-row">
+        <label>${t('widthCm')}<input type="number" min="1" data-size="w" value="${it.w}"></label>
+        <label>${t('depthCm')}<input type="number" min="1" data-size="d" value="${it.d}"></label>
+        <label>${t('heightCm')}<input type="number" min="1" data-size="h" value="${it.h}"></label>
+      </div>
+      ${it.invId ? `<span class="hint">${t('sizeSaved')}</span>` : ''}
       <label>${t('x')}<input type="number" data-k="x" value="${Math.round(p.x)}"></label>
       <label>${t('y')}<input type="number" data-k="y" value="${Math.round(p.y)}"></label>
       <label>${t('rotation')}<input type="number" data-k="rot" step="15" value="${Math.round(p.rot)}"></label>
@@ -263,6 +272,14 @@ function renderInspector() {
       <div class="row"><button data-a="rl">${t('rotateL')}</button><button data-a="rr">${t('rotateR')}</button></div>
       <div class="row"><button data-a="dup">${t('duplicate')}</button><button data-a="del" class="danger">${t('delete')}</button></div>`;
     box.querySelectorAll('input[data-k]').forEach((inp) => (inp.onchange = () => { p[inp.dataset.k] = inp.type === 'number' ? +inp.value : inp.value; emit('placed'); }));
+    // Size: changes this piece everywhere in the event; for inventory pieces it also becomes the saved default size.
+    box.querySelectorAll('[data-size]').forEach((inp) => (inp.onchange = () => {
+      const k = inp.dataset.size, v = Math.max(1, Math.round(+inp.value || 0));
+      it[k] = v;
+      const inv = INVENTORY.find((x) => x.id === it.invId);
+      if (inv) { inv[k] = v; saveInventory(); document.dispatchEvent(new CustomEvent('inventory-changed')); }
+      emit('furniture'); toast(t('sizeUpdated'));
+    }));
     const seats = box.querySelector('[data-seats]'); if (seats) seats.onchange = () => { it.seats = Math.max(0, +seats.value); emit('furniture'); };
     box.querySelector('[data-lock]').onchange = (e) => { p.locked = e.target.checked; emit('placed'); };
   }
@@ -288,22 +305,37 @@ $('exportDxf').addEventListener('click', () => download(`${fileBase()} - plan.dx
 $('fitView').addEventListener('click', plan.fit);
 // Tap two opposite room corners, then type the real width and length: the plan image is stretched to fit
 // (screenshots are often not to scale in both directions) and the 4 room walls are drawn.
-const askMetres = (msg, def = '') => parseFloat(String(prompt(msg, def) || '').replace(',', '.'));
+const askMetres = (msg, def = '') => toMetres(parseFloat(String(prompt(msg, def) || '').replace(',', '.')));
 function calibrateRoom() {
   $('stage').scrollIntoView({ behavior: 'smooth', block: 'start' });
   toast(t('cornersStep'));
-  plan.startCalibrate((a, b) => {
+  plan.startCalibrate(async (a, b) => {
     const im = state.venue?.image; if (!im) return;
-    const W = askMetres(t('askRoomWidth')); if (!(W > 0)) return;
-    const L = askMetres(t('askRoomLength')); if (!(L > 0)) return;
+    // Read the sizes written on the plan around the room (image pixels of the tapped corners).
+    toast(t('readingDims'));
+    const nat = await new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.src = im.src; });
+    const toPx = (q) => ({ u: ((q.x - (im.x || 0)) / im.w) * nat.width, v: (1 - (q.y - (im.y || 0)) / im.h) * nat.height });
+    const pa = toPx(a), pb = toPx(b);
+    const found = await readDimensions(im.src, { x0: Math.min(pa.u, pb.u), x1: Math.max(pa.u, pb.u), y0: Math.min(pa.v, pb.v), y1: Math.max(pa.v, pb.v) });
+    const W = askMetres(t('askRoomWidth'), found.w ?? ''); if (!(W > 0)) return;
+    const L = askMetres(t('askRoomLength'), found.l ?? ''); if (!(L > 0)) return;
     const dx = Math.abs(b.x - a.x), dy = Math.abs(b.y - a.y); if (dx < 1 || dy < 1) return;
     const kx = (W * 100) / dx, ky = (L * 100) / dy, x0 = Math.min(a.x, b.x), y0 = Math.min(a.y, b.y);
     // move the room's bottom-left corner to 0,0 and scale each axis
     im.x = ((im.x || 0) - x0) * kx; im.y = ((im.y || 0) - y0) * ky; im.w *= kx; im.h *= ky;
     const Wc = W * 100, Lc = L * 100;
-    state.venue.segments = [[0, 0, Wc, 0], [Wc, 0, Wc, Lc], [Wc, Lc, 0, Lc], [0, Lc, 0, 0]].map(([x1, y1, x2, y2]) => ({ x1, y1, x2, y2, layer: 'WALLS' }));
-    state.venue.layers = { WALLS: true };
-    emit('venue'); plan.fit(); toast(t('roomDone', { w: W, l: L }));
+    toast(t('tracing'));
+    // Trace the picture into CAD lines, add dimension lines, then hide the photo (it stays as a layer).
+    traceImage(im.src).then((tr) => {
+      const traced = strokesToSegments(tr, im, { W: Wc, L: Lc });
+      const walls = traced.filter((s) => s.layer === 'WALLS').length;
+      const outline = walls < 4 ? [[0, 0, Wc, 0], [Wc, 0, Wc, Lc], [Wc, Lc, 0, Lc], [0, Lc, 0, 0]].map(([x1, y1, x2, y2]) => ({ x1, y1, x2, y2, layer: 'WALLS' })) : [];
+      const dims = dimensionsFor(Wc, Lc);
+      state.venue.segments = [...outline, ...traced, ...dims.segs];
+      state.venue.texts = dims.texts;
+      state.venue.layers = { WALLS: true, DETAIL: true, DIMENSIONS: true, PHOTO: false };
+      emit('venue'); plan.fit(); toast(t('roomDone', { w: W, l: L }));
+    }).catch(() => toast(t('traceFail')));
   });
 }
 $('scaleBtn').addEventListener('click', calibrateRoom);

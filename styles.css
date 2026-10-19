@@ -301,3 +301,7 @@ h4 { margin: 6px 0 0; font-size: 12px; color: var(--muted); font-weight: 600; te
 }
 /* readable text everywhere on the dark sidebar */
 .sidebar .stats, .sidebar .stats b, .sidebar summary, .sidebar #layerList label, .sidebar .fitem .fname, .sidebar h3 { color: var(--cream); }
+
+.inspector .size-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.inspector .size-row label { flex-direction: column; align-items: stretch; gap: 2px; font-size: 11px; }
+.inspector .size-row input { width: 100%; }

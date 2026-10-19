@@ -124,7 +124,7 @@ export function rebuild() {
   const floorMat = roles.floor ? texMat('walnut', roles.floor, Math.max(W, D) / 1.5, { roughness: 0.5 }) : mat('#cdbfae', { roughness: 0.55 });
   const floor = mesh(new THREE.PlaneGeometry(W + 4, D + 4), floorMat, cx, 0, cz);
   floor.rotation.x = -Math.PI / 2; root.add(floor);
-  if (state.venue?.image) {
+  if (state.venue?.image && state.venue.layers?.PHOTO !== false) {
     const im = state.venue.image, tex = new THREE.TextureLoader().load(im.src);
     tex.colorSpace = THREE.SRGBColorSpace;
     const plan = mesh(new THREE.PlaneGeometry(im.w * M, im.h * M), new THREE.MeshStandardMaterial({ map: tex, transparent: true, opacity: 0.85, roughness: 0.9 }), ((im.x || 0) + im.w / 2) * M, 0.005, -((im.y || 0) + im.h / 2) * M);
@@ -139,7 +139,7 @@ export function rebuild() {
     if (len < 0.05) continue;
     const isCol = /col/i.test(s.layer), isWin = /win|glass/i.test(s.layer);
     // Doors, furniture, labels and the client's old layout are only marked on the floor; fixed units are low counters.
-    const flat = /door|furn|table|station|chair|label|note|text|dim|client|hatch/i.test(s.layer);
+    const flat = /door|furn|table|station|chair|label|note|text|dim|client|hatch|detail/i.test(s.layer);
     const fixed = !flat && /fix|counter|cabinet|bar/i.test(s.layer);
     const h = flat ? 0.01 : fixed ? 0.95 : isWin ? wallH * 0.75 : wallH;
     const m = flat ? mat('#6f5a52') : isWin ? mat('#cfe3ef', { transparent: true, opacity: 0.25, roughness: 0.05 }) : isCol ? mat('#e8e2da') : fixed ? mat('#d8cfc3') : wallMat;

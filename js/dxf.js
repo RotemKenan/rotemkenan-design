@@ -62,6 +62,7 @@ export function parseVenue(text, unitsChoice = 'auto') {
 export function venueBounds(venue) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const s of visibleSegments(venue)) {
+    if (/dim/i.test(s.layer)) continue;
     minX = Math.min(minX, s.x1, s.x2); maxX = Math.max(maxX, s.x1, s.x2);
     minY = Math.min(minY, s.y1, s.y2); maxY = Math.max(maxY, s.y1, s.y2);
   }
@@ -170,6 +171,7 @@ export function exportDxf() {
   w.g(0, 'ENDSEC');
   w.g(0, 'SECTION'); w.g(2, 'ENTITIES');
   for (const s of visibleSegments(state.venue)) w.ent({ t: 'LINE', x1: s.x1, y1: s.y1, x2: s.x2, y2: s.y2 }, `VENUE_${s.layer}`.slice(0, 31));
+  for (const tx of state.venue?.texts || []) if (state.venue.layers?.[tx.layer] !== false) { w.g(0, 'TEXT'); w.g(8, `VENUE_${tx.layer}`); w.g(10, tx.x); w.g(20, tx.y); w.g(30, 0); w.g(40, tx.h); w.g(1, tx.s); w.g(50, tx.rot || 0); w.g(72, 1); w.g(11, tx.x); w.g(21, tx.y); w.g(31, 0); }
   for (const p of state.placed) {
     const it = itemOf(p); if (!it) continue;
     w.insert(blockName(it), p.x, p.y, p.rot, layerOf(it));

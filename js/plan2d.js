@@ -44,7 +44,7 @@ export function draw(clean = false) {
   }
 
   // venue
-  if (state.venue?.image) drawUnderlay(state.venue.image);
+  if (state.venue?.image && state.venue.layers?.PHOTO !== false) drawUnderlay(state.venue.image);
   ctx.strokeStyle = '#2f2a26'; ctx.lineWidth = 1.4;
   ctx.beginPath();
   for (const s of visibleSegments(state.venue)) {
@@ -52,6 +52,15 @@ export function draw(clean = false) {
     ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
   }
   ctx.stroke();
+
+  // venue texts (dimensions, labels)
+  for (const tx of state.venue?.texts || []) {
+    if (state.venue.layers?.[tx.layer] === false) continue;
+    const c = toScreen(tx.x, tx.y);
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate((-(tx.rot || 0) * Math.PI) / 180);
+    ctx.fillStyle = '#5a1f2a'; ctx.font = `${Math.max(10, tx.h * view.scale)}px Assistant, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(tx.s, 0, 0); ctx.restore();
+  }
 
   // furniture: floors first (dance floor, stage) so seating draws on top
   const bad = clean ? new Set() : overlaps();
