@@ -73,6 +73,8 @@ export async function findInventory(images, text = '') {
 // Rough seating per piece: people sit about 60–65 cm apart on sofas; single seats count 1.
 export function seatsOf(it) {
   if (!it) return 0;
+  // a table only seats people through the chairs drawn around it; inventory tables come without chairs
+  if (['roundTable', 'rectTable', 'bistro', 'cocktail', 'counter', 'bar'].includes(it.kind)) return it.invId || it.photo ? 0 : it.seats || 0;
   if (it.seats) return it.seats;
   switch (it.kind) {
     case 'curvedSofa': { const R = it.w / 2, r = (it.innerW || it.w - 110) / 2, mid = (R + r) / 2; const span = Math.acos(Math.max(-0.2, Math.min(0.95, (R - (it.d || R)) / r))); return Math.max(2, Math.floor((2 * span * mid) / 65)); }
