@@ -407,6 +407,8 @@ function renderMeasureUi() {
 $('measureBtn').addEventListener('click', () => { if (plan.toggleMeasure()) toast(t('measureHint')); renderMeasureUi(); });
 $('clearMeasures').addEventListener('click', () => { state.measures = []; emit('measure'); });
 $('undoBtn').onclick = () => emit('undo');
+$('undoTop').onclick = () => emit('undo');
+$('redoTop').onclick = () => emit('redo');
 $('redoBtn').onclick = () => emit('redo');
 
 // ---------- 3D ----------
@@ -441,7 +443,8 @@ function autosave() {
 window.addEventListener('beforeunload', () => { saveProject(); });
 
 // ---------- reactions ----------
-let rebuild3d;
+let rebuild3d, commitTimer;
+function refreshUndo() { $('undoBtn').disabled = $('undoTop').disabled = !canUndo(); $('redoBtn').disabled = $('redoTop').disabled = !canRedo(); }
 onChange((reason) => {
   if (reason === 'undo' || reason === 'redo') {
     if (reason === 'undo' ? undo() : redo()) emit('restored');
@@ -451,9 +454,10 @@ onChange((reason) => {
   if (reason === 'venue') renderLayers();
   if (['measure', 'measureMode', 'load'].includes(reason)) renderMeasureUi();
   if (reason === 'mood') renderMood();
-  if (reason === 'furniture' || reason === 'placed') commitHistory();
+  // one user action can fire several changes in a row — record them as a single undo step
+  if (reason === 'furniture' || reason === 'placed') { clearTimeout(commitTimer); commitTimer = setTimeout(() => { commitHistory(); refreshUndo(); }, 0); }
   if (['furniture', 'placed', 'mood', 'load', 'restored'].includes(reason)) renderFurniture();
-  $('undoBtn').disabled = !canUndo(); $('redoBtn').disabled = !canRedo();
+  refreshUndo();
   if (reason !== 'move') renderInspector();
   if (reason !== 'moodText') { plan.draw(); if (reason !== 'move') renderStats(); }
   if (show3d()) {
