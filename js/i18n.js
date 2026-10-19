@@ -87,7 +87,7 @@ export const HE_NAMES = {
 export const HE_KINDS = {
   'Round table Ø180': 'שולחן עגול Ø180', 'Round table Ø150': 'שולחן עגול Ø150', 'Banquet table 240×100': 'שולחן מלבני 240×100', 'Knight table 400×120': 'שולחן אבירים 400×120',
   'Bride & groom table': 'שולחן חתן וכלה', 'Cocktail table Ø70': 'שולחן בר Ø70', 'Lounge sofa': 'ספת לאונג׳', 'Armchair': 'כורסה', 'Bar counter': 'דלפק בר', 'Stage / DJ': 'במה / DJ',
-  'Dance floor': 'רחבת ריקודים', 'Chuppah / Arch': 'חופה / קשת', 'Floral / plant': 'פרחים / צמחייה', 'Buffet station': 'עמדת מזנון', 'Custom item': 'פריט מותאם',
+  'Dance floor': 'רחבת ריקודים', 'Chuppah / Arch': 'חופה / קשת', 'Floral / plant': 'פרחים / צמחייה', 'Buffet station': 'עמדת מזנון', 'Chair': 'כיסא', 'Custom item': 'פריט מותאם',
 };
 
 let lang = 'en';

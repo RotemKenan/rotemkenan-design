@@ -199,7 +199,7 @@ function tableNumber(p) {
 // Chair centres around a table in item-local coords (cm); a = angle of the chair's tangent (faces the table at a - π/2).
 export function chairPositions(it) {
   const out = [], n = it.seats;
-  if (!n) return out;
+  if (!n || it.invId || it.photo) return out; // inventory tables come alone — chairs are placed as separate pieces
   if (isRound(it)) {
     const r = it.w / 2 + 25;
     for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; out.push({ x: Math.cos(a) * r, y: Math.sin(a) * r, a: a + Math.PI / 2 }); }

@@ -267,7 +267,7 @@ function renderInspector() {
       <label>${t('y')}<input type="number" data-k="y" value="${Math.round(p.y)}"></label>
       <label>${t('rotation')}<input type="number" data-k="rot" step="15" value="${Math.round(p.rot)}"></label>
       <label>${t('label')}<input type="text" data-k="label" value="${esc(p.label || '')}"></label>
-      ${it.seats || ['roundTable', 'rectTable', 'bistro'].includes(it.kind) ? `<label>${t('seat')}<input type="number" data-seats value="${it.seats}" min="0"></label>` : ''}
+      ${!it.invId && (it.seats || ['roundTable', 'rectTable'].includes(it.kind)) ? `<label>${t('seat')}<input type="number" data-seats value="${it.seats}" min="0"></label>` : ''}
       <label class="chk"><input type="checkbox" data-lock ${p.locked ? 'checked' : ''}> ${t('lock')}</label>
       <div class="row"><button data-a="rl">${t('rotateL')}</button><button data-a="rr">${t('rotateR')}</button></div>
       <div class="row"><button data-a="dup">${t('duplicate')}</button><button data-a="del" class="danger">${t('delete')}</button></div>`;

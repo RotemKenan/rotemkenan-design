@@ -14,6 +14,7 @@ export const PRESETS = [
   { kind: 'danceFloor', name: 'Dance floor', w: 600, d: 600, h: 2, seats: 0, color: '#efe7da' },
   { kind: 'chuppah', name: 'Chuppah / Arch', w: 250, d: 250, h: 260, seats: 0, color: '#ffffff' },
   { kind: 'plant', name: 'Floral / plant', w: 60, d: 60, h: 150, seats: 0, color: '#8fa07e' },
+  { kind: 'chair', name: 'Chair', w: 45, d: 50, h: 90, seats: 0, color: '#c8a46a' },
   { kind: 'buffet', name: 'Buffet station', w: 300, d: 80, h: 90, seats: 0, color: '#f4efe6' },
 ];
 
@@ -25,9 +26,9 @@ const DEFAULT_INVENTORY = [
   { id: 'low-round-linen', kind: 'lowTable', shape: 'round', legs: 'cabriole', cloth: '#ece5d8', name: 'Low round table + linen', w: 90, d: 90, h: 45, seatH: 0, color: '#1b1918', finish: 'lacquer', notes: 'Cloth approx. 90×90 cm, laid diagonally' },
   { id: 'low-square-black', kind: 'lowTable', shape: 'square', legs: 'cabriole', name: 'Low square table, black cabriole', w: 80, d: 80, h: 45, seatH: 0, color: '#1b1918', finish: 'lacquer' },
   { id: 'low-square-linen', kind: 'lowTable', shape: 'square', legs: 'cabriole', cloth: '#ece5d8', name: 'Low square table + linen', w: 80, d: 80, h: 45, seatH: 0, color: '#1b1918', finish: 'lacquer' },
-  { id: 'bistro-black', kind: 'bistro', shape: 'round', name: 'Bistro table, black', w: 70, d: 70, h: 75, seatH: 0, seats: 2, color: '#1b1918', finish: 'lacquer' },
-  { id: 'bistro-walnut', kind: 'bistro', shape: 'round', name: 'Bistro table, walnut top', w: 70, d: 70, h: 75, seatH: 0, seats: 2, color: '#b07a4f', finish: 'walnut', supplier: 'Harmonia', sku: '3201-24' },
-  { id: 'bistro-candle', kind: 'bistro', shape: 'round', cloth: '#ece5d8', candle: true, name: 'Bistro + linen & hurricane', w: 70, d: 70, h: 75, seatH: 0, seats: 2, color: '#1b1918', finish: 'lacquer' },
+  { id: 'bistro-black', kind: 'bistro', shape: 'round', name: 'Bistro table, black', w: 70, d: 70, h: 75, seatH: 0, color: '#1b1918', finish: 'lacquer' },
+  { id: 'bistro-walnut', kind: 'bistro', shape: 'round', name: 'Bistro table, walnut top', w: 70, d: 70, h: 75, seatH: 0, color: '#b07a4f', finish: 'walnut', supplier: 'Harmonia', sku: '3201-24' },
+  { id: 'bistro-candle', kind: 'bistro', shape: 'round', cloth: '#ece5d8', candle: true, name: 'Bistro + linen & hurricane', w: 70, d: 70, h: 75, seatH: 0, color: '#1b1918', finish: 'lacquer' },
   { id: 'club-leather', kind: 'club', name: 'Vintage leather armchair', w: 80, d: 85, h: 90, seatH: 45, color: '#7a4526', finish: 'leather', supplier: 'Harmonia', sku: '3451' },
   { id: 'channel-sofa', kind: 'channelSofa', name: 'Channel velvet sofa, chocolate', w: 200, d: 73, h: 80, seatH: 45, color: '#3b2419', finish: 'velvet', supplier: 'Sugoy Design', known: ['d', 'h'] },
   { id: 'curved-green', kind: 'curvedSofa', name: 'Curved velvet sofa, green', w: 346, d: 150, h: 87, seatH: 48, innerW: 200, color: '#1f5a3c', finish: 'velvet', supplier: 'Sugoy Design', notes: 'Supplier: outer arc Ø3.46 m, inner Ø2.00 m, length 3.30 m, seat width 78 cm', known: ['w', 'd', 'h', 'seatH', 'innerW'] },

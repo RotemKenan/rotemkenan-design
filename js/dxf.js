@@ -95,7 +95,7 @@ export function footprint(p, item) {
   return [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]].map(([x, y]) => ({ x: p.x + x * c - y * s, y: p.y + x * s + y * c }));
 }
 
-const SEATING = ['sofa', 'armchair', 'club', 'slipper', 'channelSofa', 'bench', 'loungeChair'];
+const SEATING = ['sofa', 'armchair', 'club', 'slipper', 'channelSofa', 'bench', 'loungeChair', 'chair'];
 
 // Top-view outline of one item in its own coordinates (cm).
 export function itemOutline(it) {

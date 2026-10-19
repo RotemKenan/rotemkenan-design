@@ -184,6 +184,10 @@ export function buildItem(it, { chairs = true } = {}) {
       }
       break;
     }
+    case 'chair': {
+      g.add(chair(c)); // back toward +y in plan, seat facing -y, like every seat
+      break;
+    }
     case 'pouf': {
       const r = w / 2, fringeH = h * 0.42;
       const tiles = 3, tileH = ((Math.PI * w) / tiles) * 0.38; // photo crops are ~2.6:1
