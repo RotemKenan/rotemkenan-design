@@ -8,7 +8,7 @@ const NAMED_UNITS = { mm: 0.1, cm: 1, m: 100 };
 
 // Venue plans that ship with the app (traced by hand), selectable without uploading a file.
 export const VENUE_LIBRARY = [
-  { file: 'assets/venues/ambassadors-hall.dxf', en: 'Ambassadors hall (18.84 × 9.15 m)', he: 'אולם אמבסדורס (18.84 × 9.15 מ׳)' },
+  { file: 'assets/venues/ambassadors-hall.dxf', en: 'Ambassadors hall — empty (18.84 × 9.15 m)', he: 'אולם אמבסדורס — ריק (18.84 × 9.15 מ׳)' },
 ];
 
 // A file is DXF only if it is text that starts with group code 0 / SECTION (or 999 comment).
