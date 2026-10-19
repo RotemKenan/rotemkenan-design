@@ -23,7 +23,7 @@ export function fit() {
   if (!r.width) return;
   const b = state.venue ? venueBounds(state.venue) : { minX: 0, minY: 0, maxX: 2000, maxY: 1500 };
   const w = b.maxX - b.minX, h = b.maxY - b.minY;
-  view.scale = Math.min((r.width - 80) / w, (r.height - 140) / h);
+  view.scale = Math.min((r.width - 150) / w, (r.height - 170) / h); // room for the dimension lines
   view.ox = (r.width - w * view.scale) / 2 - b.minX * view.scale;
   view.oy = (r.height - h * view.scale) / 2 - b.minY * view.scale + 30;
   draw();
@@ -52,6 +52,9 @@ export function draw(clean = false) {
     ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
   }
   ctx.stroke();
+
+  if (state.venue && !state.venue.layers?.DIMENSIONS) drawOverallDims();
+  for (const m of state.measures || []) drawMeasure(m.a, m.b, '#2f6f8f');
 
   // venue texts (dimensions, labels)
   for (const tx of state.venue?.texts || []) {
@@ -162,6 +165,11 @@ function drawOverlay() {
       ctx.strokeStyle = '#2f6f8f'; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([]);
       label((a.x + b.x) / 2, (a.y + b.y) / 2, `${Math.round(wd.d)} cm`, '#2f6f8f');
     }
+  }
+  if (measuring) {
+    const h = measuring.hover;
+    if (h) { const H = toScreen(h.x, h.y); ctx.strokeStyle = '#2f6f8f'; ctx.beginPath(); ctx.arc(H.x, H.y, 5, 0, Math.PI * 2); ctx.stroke(); }
+    if (measuring.a && h) drawMeasure(measuring.a, h, '#2f6f8f');
   }
   if (calib) {
     ctx.fillStyle = '#5a1f2a'; ctx.strokeStyle = '#5a1f2a'; ctx.lineWidth = 2;
@@ -278,10 +286,50 @@ let hover = null, marquee = null, live = null;
 
 // Room calibration: the user taps two points on the plan; cb receives both points (world cm).
 let calib = null, calibHover = null;
+
+// ---------- measuring ----------
+let measuring = null; // { a?: point } while the measure tool is on
+export const isMeasuring = () => !!measuring;
+export function toggleMeasure(on = !measuring) { measuring = on ? {} : null; canvas.style.cursor = on ? 'crosshair' : 'grab'; draw(); return !!measuring; }
+// Snap to a wall/door end point within ~12 px, so measurements start exactly at corners and openings.
+function snapPoint(w, from, ortho) {
+  let best = null, bd = 12 / view.scale;
+  for (const s of visibleSegments(state.venue)) for (const q of [{ x: s.x1, y: s.y1 }, { x: s.x2, y: s.y2 }]) {
+    const d = Math.hypot(q.x - w.x, q.y - w.y); if (d < bd) { bd = d; best = q; }
+  }
+  let p = best ? { ...best } : { ...w };
+  if (ortho && from) { if (Math.abs(p.x - from.x) > Math.abs(p.y - from.y)) p.y = from.y; else p.x = from.x; }
+  return p;
+}
+const fmtLen = (cm) => (cm >= 100 ? `${(cm / 100).toFixed(2)} m` : `${Math.round(cm)} cm`);
+function drawMeasure(a, b, color) {
+  const A = toScreen(a.x, a.y), B = toScreen(b.x, b.y), ang = Math.atan2(B.y - A.y, B.x - A.x), nx = -Math.sin(ang) * 6, ny = Math.cos(ang) * 6;
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y);
+  ctx.moveTo(A.x - nx, A.y - ny); ctx.lineTo(A.x + nx, A.y + ny); ctx.moveTo(B.x - nx, B.y - ny); ctx.lineTo(B.x + nx, B.y + ny); ctx.stroke();
+  label((A.x + B.x) / 2, (A.y + B.y) / 2 - 10, fmtLen(Math.hypot(b.x - a.x, b.y - a.y)), color);
+}
+function drawOverallDims() {
+  // Room size from the walls only (door swings and units sticking out are not part of the room).
+  const segs = visibleSegments(state.venue), walls = segs.filter((q) => /wall/i.test(q.layer));
+  const use = walls.length ? walls : segs; if (!use.length) return;
+  const b = use.reduce((o, q) => ({ minX: Math.min(o.minX, q.x1, q.x2), maxX: Math.max(o.maxX, q.x1, q.x2), minY: Math.min(o.minY, q.y1, q.y2), maxY: Math.max(o.maxY, q.y1, q.y2) }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
+  const off = 70;
+  drawMeasure({ x: b.minX, y: b.maxY + off }, { x: b.maxX, y: b.maxY + off }, '#5a1f2a');
+  const A = toScreen(b.maxX + off, b.minY), B = toScreen(b.maxX + off, b.maxY);
+  ctx.strokeStyle = '#5a1f2a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(A.x, A.y); ctx.lineTo(B.x, B.y);
+  ctx.moveTo(A.x - 6, A.y); ctx.lineTo(A.x + 6, A.y); ctx.moveTo(B.x - 6, B.y); ctx.lineTo(B.x + 6, B.y); ctx.stroke();
+  ctx.save(); ctx.translate(A.x + 14, (A.y + B.y) / 2); ctx.rotate(-Math.PI / 2); label(0, 0, fmtLen(b.maxY - b.minY), '#5a1f2a'); ctx.restore();
+}
 export function startCalibrate(cb) { calib = { pts: [], cb }; canvas.style.cursor = 'crosshair'; draw(); }
 
 canvas.addEventListener('pointerdown', (e) => {
   const { sx, sy } = rel(e), w = toWorld(sx, sy);
+  if (measuring) {
+    const pt = snapPoint(w, measuring.a, e.shiftKey);
+    if (!measuring.a) { measuring.a = pt; draw(); return; }
+    (state.measures ||= []).push({ a: measuring.a, b: pt }); measuring = {}; emit('measure'); return;
+  }
   if (calib) {
     calib.pts.push(w); draw();
     if (calib.pts.length === 2) { const [a, b] = calib.pts, cb = calib.cb; calib = null; canvas.style.cursor = 'grab'; setTimeout(() => cb(a, b), 30); }
@@ -312,6 +360,7 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('pointermove', (e) => {
   const { sx, sy } = rel(e), w = toWorld(sx, sy);
   if (calib) { calibHover = { x: sx, y: sy }; draw(); return; }
+  if (measuring) { measuring.hover = snapPoint(w, measuring.a, e.shiftKey); draw(); return; }
   if (!drag) {
     const h = hit(w.x, w.y);
     if (h !== hover) { hover = h; draw(); }
@@ -358,6 +407,7 @@ window.addEventListener('keydown', (e) => {
   if (!document.querySelector('#planView.active, #threeView.active')) return;
   const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
   if (e.code === 'Space') { spaceDown = true; return; }
+  if (e.key === 'Escape' && measuring) { toggleMeasure(false); emit('measureMode'); return; }
   if (mod && k === 'z') { e.preventDefault(); emit(e.shiftKey ? 'redo' : 'undo'); return; }
   if (mod && k === 'y') { e.preventDefault(); emit('redo'); return; }
   if (mod && k === 'a') { e.preventDefault(); setSelection(state.placed.map((p) => p.id)); return; }

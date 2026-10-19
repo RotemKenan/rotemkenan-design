@@ -339,6 +339,14 @@ function calibrateRoom() {
   });
 }
 $('scaleBtn').addEventListener('click', calibrateRoom);
+function renderMeasureUi() {
+  const on = plan.isMeasuring();
+  $('measureBtn').textContent = on ? t('measureOn') : t('measure');
+  $('measureBtn').classList.toggle('primary', on);
+  $('clearMeasures').classList.toggle('hidden', !(state.measures || []).length);
+}
+$('measureBtn').addEventListener('click', () => { if (plan.toggleMeasure()) toast(t('measureHint')); renderMeasureUi(); });
+$('clearMeasures').addEventListener('click', () => { state.measures = []; emit('measure'); });
 $('undoBtn').onclick = () => emit('undo');
 $('redoBtn').onclick = () => emit('redo');
 
@@ -356,7 +364,7 @@ $('presentSuppliers').onchange = () => buildPresentation();
 // ---------- language ----------
 $('langToggle').onclick = () => { applyLang(getLang() === 'he' ? 'en' : 'he'); $('saveState').textContent = '✓ ' + t('saved'); refreshAll(); };
 function refreshAll() {
-  renderVenueLibrary(); renderPresets(); renderGallery(); renderFurniture(); renderMood(); renderStats(); renderInspector(); renderEventSelect(); plan.draw();
+  renderVenueLibrary(); renderMeasureUi(); renderPresets(); renderGallery(); renderFurniture(); renderMood(); renderStats(); renderInspector(); renderEventSelect(); plan.draw();
   if (currentView === 'inventory') renderInventory();
   if (currentView === 'present') buildPresentation();
 }
@@ -382,6 +390,7 @@ onChange((reason) => {
   }
   if (reason === 'load') { saveInventory(); /* event copies pick up corrected inventory sizes */ renderBrief(); renderLayers(); renderMood(); $('lightMood').value = state.mood.light || 'evening'; }
   if (reason === 'venue') renderLayers();
+  if (['measure', 'measureMode', 'load'].includes(reason)) renderMeasureUi();
   if (reason === 'mood') renderMood();
   if (reason === 'furniture' || reason === 'placed') commitHistory();
   if (['furniture', 'placed', 'mood', 'load', 'restored'].includes(reason)) renderFurniture();
