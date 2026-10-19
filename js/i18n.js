@@ -78,7 +78,7 @@ const HE = {
 // Hebrew names for the inventory and the basic pieces.
 export const HE_NAMES = {
   'low-round-black': 'שולחן נמוך עגול, שחור, רגלי קבריולה', 'low-round-linen': 'שולחן נמוך עגול + מפת פשתן', 'low-square-black': 'שולחן נמוך מרובע, שחור, רגלי קבריולה', 'low-square-linen': 'שולחן נמוך מרובע + מפת פשתן',
-  'bistro-black': 'שולחן ביסטרו שחור', 'bistro-walnut': 'שולחן ביסטרו, פלטת אגוז', 'bistro-candle': 'ביסטרו + מפת פשתן ופמוט זכוכית', 'club-leather': 'כורסת עור חומה וינטג׳',
+  'bistro-black': 'שולחן ביסטרו שחור', 'bistro-walnut': 'שולחן ביסטרו, פלטת אגוז', 'bistro-candle': 'ביסטרו + מפת פשתן ופמוט זכוכית', 'bar-table-black': 'שולחן בר עגול שחור, רגל ברזל שחורה', 'club-leather': 'כורסת עור חומה וינטג׳',
   'channel-sofa': 'ספת קטיפה תפורה, שוקולד', 'curved-green': 'ספה מעוגלת קטיפה, ירוקה', 'curved-rust': 'ספה מעוגלת קטיפה, חלודה', 'slipper-rust': 'כורסת קטיפה ללא ידיות, חלודה',
   'slipper-green': 'כורסת קטיפה ללא ידיות, ירוקה', 'channel-chair-green': 'כורסת קטיפה תפורה, זית', 'bench-burgundy': 'ספסל קטיפה ללא ידיות, בורדו', 'armchair-navy': 'כורסת קטיפה כחולה, מסגרת פלדה שחורה',
   'slipper-teal': 'כורסת קטיפה ללא ידיות, טורקיז', 'curved-navy': 'ספה מעוגלת קטיפה, כחול נייבי', 'curved-brown': 'ספה מעוגלת קטיפה, שוקולד', 'curved-burgundy': 'ספה מעוגלת קטיפה, בורדו', 'counter-marble': 'דלפק עץ, פסי פליז, משטח שיש שחור', 'pouf-damask': 'פוף פרנזים, קטיפה דמשק גותי',
