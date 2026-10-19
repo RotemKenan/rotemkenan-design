@@ -1,5 +1,6 @@
 // Interactive 2D plan: venue lines + furniture, drag / rotate / duplicate / delete.
 import { state, emit, itemOf, newId, isRound } from './state.js';
+import { seatsOf } from './match.js';
 import { venueBounds, visibleSegments, footprint, itemOutline } from './dxf.js';
 
 const canvas = document.getElementById('planCanvas');
@@ -73,6 +74,7 @@ export function draw(clean = false) {
     drawItem(p, it, state.selection.includes(p.id), bad.has(p.id));
   }
   if (!clean) drawOverlay();
+  if (!clean && document.getElementById('seatsToggle')?.checked) drawSeatBadges();
 
   // scale bar
   ctx.fillStyle = '#8a7f75'; ctx.font = '11px Inter';
@@ -187,6 +189,21 @@ function drawOverlay() {
     ctx.fillRect(a.x, a.y, b.x - a.x, b.y - a.y); ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y); ctx.setLineDash([]);
   }
   if (hover && !drag) { const it = itemOf(hover); if (it) { const c = toScreen(hover.x, hover.y); label(c.x, c.y - (Math.max(it.w, it.d) / 2) * view.scale - 14, `${tName(it)} · ${it.w}×${it.d}`, '#1b1918'); } }
+}
+// seat-count badges: the number each piece adds to the seat total
+function drawSeatBadges() {
+  let total = 0;
+  ctx.font = 'bold 12px Inter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const p of state.placed) {
+    const n = seatsOf(itemOf(p)); if (!n) continue; total += n;
+    const c = toScreen(p.x, p.y), r = n > 9 ? 11 : 9;
+    ctx.fillStyle = '#2f6f8f'; ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.fillText(String(n), c.x, c.y + 0.5);
+  }
+  ctx.font = 'bold 13px Inter'; const txt = `Σ ${total}`, w = ctx.measureText(txt).width + 16;
+  ctx.fillStyle = '#2f6f8f'; ctx.fillRect(canvas.clientWidth - w - 16, 12, w, 24);
+  ctx.fillStyle = '#fff'; ctx.fillText(txt, canvas.clientWidth - w / 2 - 16, 24);
 }
 function label(x, y, text, color) {
   ctx.font = '11px Inter'; const w = ctx.measureText(text).width + 10;

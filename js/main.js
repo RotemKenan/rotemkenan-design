@@ -513,3 +513,5 @@ initMood(toast);
   plan.resize();
   plan.fit();
 })();
+
+$('seatsToggle').onchange = () => plan.draw();
