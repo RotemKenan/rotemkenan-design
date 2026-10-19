@@ -3,7 +3,8 @@ import {
   newProject, saveProject, listProjects, openProject, deleteProject, restoreLastProject, newId,
   commitHistory, undo, redo, canUndo, canRedo,
 } from './state.js';
-import { parseVenue, demoVenue, exportDxf } from './dxf.js';
+import { parseVenue, demoVenue, exportDxf, looksLikeDxf, VENUE_LIBRARY } from './dxf.js';
+import { blobToDataUrl } from './pptx.js';
 import { suggestLayout } from './layout.js';
 import * as plan from './plan2d.js';
 import * as view3d from './view3d.js';
@@ -103,16 +104,40 @@ function renderStats() {
 }
 
 // ---------- venue ----------
+function setVenueFromDxf(text, name) {
+  state.venue = parseVenue(text, $('venueUnits').value);
+  state.venue.wallHeight = +$('wallHeight').value || 320;
+  toast(t('dxfLoaded', { name, n: state.venue.segments.length }));
+  emit('venue'); plan.fit();
+}
 $('venueFile').addEventListener('change', async (e) => {
-  const f = e.target.files[0]; if (!f) return;
-  if (/\.dwg$/i.test(f.name)) { toast(t('dwgClosed')); e.target.value = ''; return; }
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
   try {
-    state.venue = parseVenue(await f.text(), $('venueUnits').value);
-    state.venue.wallHeight = +$('wallHeight').value || 320;
-    toast(t('dxfLoaded', { name: f.name, n: state.venue.segments.length }));
-    emit('venue'); plan.fit();
-  } catch (err) { toast(t('dxfError', { msg: err.message })); }
-  e.target.value = '';
+    // Decide by file name first: some systems label .dxf files as "image/vnd.dxf".
+    const isCad = /\.(dxf|dwg)$/i.test(f.name) || /dxf|dwg/i.test(f.type);
+    if (!isCad && (f.type.startsWith('image/') || /\.(png|jpe?g|heic|heif|webp|gif)$/i.test(f.name))) {
+      // A screenshot / photo of the plan: place it to scale as a background to design on.
+      const src = await blobToDataUrl(f, 2400);
+      const img = await new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = () => j(new Error('image')); i.src = src; });
+      const m = parseFloat(String(prompt(t('askWidth'), '20') || '').replace(',', '.'));
+      if (!(m > 0)) return;
+      const w = m * 100, h = Math.round((w * img.height) / img.width);
+      state.venue = { segments: [], layers: {}, wallHeight: +$('wallHeight').value || 320, image: { src, w, h, opacity: 0.7 } };
+      toast(t('imgLoaded', { w: m, h: (h / 100).toFixed(2) }));
+      emit('venue'); plan.fit(); return;
+    }
+    if (/\.dwg$/i.test(f.name)) { toast(t('dwgClosed')); return; }
+    const text = await f.text();
+    if (!looksLikeDxf(text)) { toast(t('notDxf')); return; }
+    setVenueFromDxf(text, f.name);
+  } catch (err) { toast(t('dxfError', { msg: String(err.message).slice(0, 80) })); }
+});
+function renderVenueLibrary() {
+  $('venueLibrary').innerHTML = `<option value="">${t('venueLibrary')}</option>` + VENUE_LIBRARY.map((v, i) => `<option value="${i}">${esc(getLang() === 'he' ? v.he : v.en)}</option>`).join('');
+}
+$('venueLibrary').addEventListener('change', async (e) => {
+  const v = VENUE_LIBRARY[e.target.value]; e.target.value = ''; if (!v) return;
+  try { setVenueFromDxf(await (await fetch(v.file)).text(), getLang() === 'he' ? v.he : v.en); } catch (err) { toast(t('dxfError', { msg: err.message })); }
 });
 $('demoVenue').addEventListener('click', () => {
   state.venue = demoVenue(); emit('venue'); plan.fit();
@@ -126,6 +151,7 @@ $('demoVenue').addEventListener('click', () => {
 });
 $('wallHeight').addEventListener('change', () => { if (state.venue) { state.venue.wallHeight = +$('wallHeight').value; emit('venue'); } });
 function renderLayers() {
+  $('scaleBtn').classList.toggle('hidden', !state.venue?.image);
   const box = $('layerList'); box.innerHTML = '';
   if (!state.venue) return;
   $('wallHeight').value = state.venue.wallHeight || 320;
@@ -260,6 +286,15 @@ $('autoLayout').addEventListener('click', () => {
 $('clearLayout').addEventListener('click', () => { state.placed = state.placed.filter((p) => p.locked); state.selection = []; emit('placed'); });
 $('exportDxf').addEventListener('click', () => download(`${fileBase()} - plan.dxf`, exportDxf(), 'application/dxf'));
 $('fitView').addEventListener('click', plan.fit);
+$('scaleBtn').addEventListener('click', () => {
+  toast(t('scaleStep1'));
+  plan.startCalibrate((dist) => {
+    const m = parseFloat(String(prompt(t('scaleAsk'), '') || '').replace(',', '.'));
+    const im = state.venue?.image; if (!(m > 0) || !im || !dist) return;
+    const k = (m * 100) / dist; im.w *= k; im.h *= k;
+    emit('venue'); plan.fit(); toast(t('scaleDone'));
+  });
+});
 $('undoBtn').onclick = () => emit('undo');
 $('redoBtn').onclick = () => emit('redo');
 
@@ -277,7 +312,7 @@ $('presentSuppliers').onchange = () => buildPresentation();
 // ---------- language ----------
 $('langToggle').onclick = () => { applyLang(getLang() === 'he' ? 'en' : 'he'); $('saveState').textContent = '✓ ' + t('saved'); refreshAll(); };
 function refreshAll() {
-  renderPresets(); renderGallery(); renderFurniture(); renderMood(); renderStats(); renderInspector(); renderEventSelect(); plan.draw();
+  renderVenueLibrary(); renderPresets(); renderGallery(); renderFurniture(); renderMood(); renderStats(); renderInspector(); renderEventSelect(); plan.draw();
   if (currentView === 'inventory') renderInventory();
   if (currentView === 'present') buildPresentation();
 }
@@ -321,6 +356,7 @@ window.addEventListener('resize', () => { plan.resize(); view3d.resize(); });
 
 // ---------- start ----------
 applyLang();
+renderVenueLibrary();
 renderPresets();
 renderGallery();
 initInventory(toast);

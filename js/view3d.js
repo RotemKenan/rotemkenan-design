@@ -124,6 +124,12 @@ export function rebuild() {
   const floorMat = roles.floor ? texMat('walnut', roles.floor, Math.max(W, D) / 1.5, { roughness: 0.5 }) : mat('#cdbfae', { roughness: 0.55 });
   const floor = mesh(new THREE.PlaneGeometry(W + 4, D + 4), floorMat, cx, 0, cz);
   floor.rotation.x = -Math.PI / 2; root.add(floor);
+  if (state.venue?.image) {
+    const im = state.venue.image, tex = new THREE.TextureLoader().load(im.src);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const plan = mesh(new THREE.PlaneGeometry(im.w * M, im.h * M), new THREE.MeshStandardMaterial({ map: tex, transparent: true, opacity: 0.85, roughness: 0.9 }), (im.w / 2) * M, 0.005, -(im.h / 2) * M);
+    plan.rotation.x = -Math.PI / 2; plan.castShadow = false; root.add(plan);
+  }
 
   // walls from venue segments
   const wallH = (state.venue?.wallHeight || 320) * M;

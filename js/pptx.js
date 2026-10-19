@@ -25,8 +25,9 @@ export async function readMoodBoard(file) {
 }
 
 export function blobToDataUrl(blob, maxSize) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const img = new Image();
+    img.onerror = () => reject(new Error('Could not open this image'));
     img.onload = () => {
       const k = Math.min(1, maxSize / Math.max(img.width, img.height));
       const c = document.createElement('canvas');

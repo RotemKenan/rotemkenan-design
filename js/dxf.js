@@ -6,6 +6,14 @@ import { curvedGeom, chairPositions } from './plan2d.js';
 const INSUNITS_TO_CM = { 1: 2.54, 2: 30.48, 4: 0.1, 5: 1, 6: 100 };
 const NAMED_UNITS = { mm: 0.1, cm: 1, m: 100 };
 
+// Venue plans that ship with the app (traced by hand), selectable without uploading a file.
+export const VENUE_LIBRARY = [
+  { file: 'assets/venues/ambassadors-hall.dxf', en: 'Ambassadors hall (18.84 × 9.15 m)', he: 'אולם אמבסדורס (18.84 × 9.15 מ׳)' },
+];
+
+// A file is DXF only if it is text that starts with group code 0 / SECTION (or 999 comment).
+export function looksLikeDxf(text) { return /^\s*(0|999)\s*\r?\n/.test(text.slice(0, 200)) && /SECTION/.test(text.slice(0, 2000)); }
+
 export function parseVenue(text, unitsChoice = 'auto') {
   const dxf = new DxfParser().parseSync(text);
   const insunits = dxf.header?.$INSUNITS;
@@ -57,11 +65,12 @@ export function venueBounds(venue) {
     minX = Math.min(minX, s.x1, s.x2); maxX = Math.max(maxX, s.x1, s.x2);
     minY = Math.min(minY, s.y1, s.y2); maxY = Math.max(maxY, s.y1, s.y2);
   }
+  if (venue?.image) { minX = Math.min(minX, 0); minY = Math.min(minY, 0); maxX = Math.max(maxX, venue.image.w); maxY = Math.max(maxY, venue.image.h); }
   if (!isFinite(minX)) return { minX: 0, minY: 0, maxX: 2000, maxY: 1500 };
   return { minX, minY, maxX, maxY };
 }
 
-export const visibleSegments = (venue) => (venue ? venue.segments.filter((s) => venue.layers[s.layer] !== false) : []);
+export const visibleSegments = (venue) => (venue ? (venue.segments || []).filter((s) => venue.layers[s.layer] !== false) : []);
 
 export function demoVenue() {
   // 28m × 18m hall with entrance gap, two columns and a window wall.

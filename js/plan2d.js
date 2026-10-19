@@ -44,6 +44,7 @@ export function draw(clean = false) {
   }
 
   // venue
+  if (state.venue?.image) drawUnderlay(state.venue.image);
   ctx.strokeStyle = '#2f2a26'; ctx.lineWidth = 1.4;
   ctx.beginPath();
   for (const s of visibleSegments(state.venue)) {
@@ -64,6 +65,15 @@ export function draw(clean = false) {
   // scale bar
   ctx.fillStyle = '#8a7f75'; ctx.font = '11px Inter';
   ctx.fillRect(16, 16, step, 3); ctx.fillText('1 m', 16, 32);
+}
+
+const underlayCache = new Map();
+function drawUnderlay(im) {
+  let img = underlayCache.get(im.src);
+  if (!img) { img = new Image(); img.onload = () => draw(); img.src = im.src; underlayCache.set(im.src, img); }
+  if (!img.complete) return;
+  const a = toScreen(0, im.h), b = toScreen(im.w, 0);
+  ctx.globalAlpha = im.opacity ?? 0.7; ctx.drawImage(img, a.x, a.y, b.x - a.x, b.y - a.y); ctx.globalAlpha = 1;
 }
 
 function drawItem(p, it, selected, clash) {
@@ -141,6 +151,11 @@ function drawOverlay() {
       ctx.strokeStyle = '#2f6f8f'; ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([]);
       label((a.x + b.x) / 2, (a.y + b.y) / 2, `${Math.round(wd.d)} cm`, '#2f6f8f');
     }
+  }
+  if (calib) {
+    ctx.fillStyle = '#5a1f2a'; ctx.strokeStyle = '#5a1f2a'; ctx.lineWidth = 2;
+    const pts = calib.pts.map((q) => toScreen(q.x, q.y));
+    pts.forEach((q) => { ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, Math.PI * 2); ctx.fill(); });
   }
   if (marquee) {
     const a = toScreen(marquee.x0, marquee.y0), b = toScreen(marquee.x1, marquee.y1);
@@ -247,8 +262,17 @@ function rotateHandle(p, it) { // screen position of the rotate knob above the s
 
 let hover = null, marquee = null, live = null;
 
+// Scale calibration: the user taps two points on the plan; cb receives the distance between them (cm).
+let calib = null;
+export function startCalibrate(cb) { calib = { pts: [], cb }; canvas.style.cursor = 'crosshair'; draw(); }
+
 canvas.addEventListener('pointerdown', (e) => {
   const { sx, sy } = rel(e), w = toWorld(sx, sy);
+  if (calib) {
+    calib.pts.push(w); draw();
+    if (calib.pts.length === 2) { const [a, b] = calib.pts, cb = calib.cb; calib = null; canvas.style.cursor = 'grab'; setTimeout(() => cb(Math.hypot(b.x - a.x, b.y - a.y)), 30); }
+    return;
+  }
   canvas.setPointerCapture(e.pointerId);
   if (e.button === 1 || e.button === 2 || spaceDown) { drag = { mode: 'pan', sx: e.clientX, sy: e.clientY, ox: view.ox, oy: view.oy }; return; }
   const sel = selection();
