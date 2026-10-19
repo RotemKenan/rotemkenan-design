@@ -19,9 +19,16 @@ export async function readMoodBoard(file) {
     for (const m of scheme.matchAll(/<a:(accent\d|dk2|lt2)>[\s\S]*?(?:srgbClr val|lastClr)="([0-9A-Fa-f]{6})"/g)) themeColors.push('#' + m[2].toLowerCase());
   }
 
+  // all slide text, used to recognise furniture names written on the slides
+  let text = '';
+  for (const name of Object.keys(zip.files).filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n))) {
+    const xml = await zip.file(name).async('string');
+    text += ' ' + [...xml.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((m) => m[1]).join(' ');
+  }
+
   const imgColors = await paletteFromImages(images.slice(0, 12));
   const palette = dedupe([...imgColors, ...themeColors]).slice(0, 12);
-  return { images, palette };
+  return { images, palette, text };
 }
 
 export function blobToDataUrl(blob, maxSize) {

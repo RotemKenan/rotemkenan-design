@@ -132,3 +132,106 @@ function makeFrame(side, b) {
     default: return { W: W0, H: H0, rot: 0, toWorld: (x, y) => ({ x: b.minX + x, y: b.minY + y }) };
   }
 }
+
+// ---------- base design from a mood board selection ----------
+// Builds lounge "islands" from the chosen pieces and packs them into the room with walking aisles:
+// curved sofas in facing pairs around a low table with poufs, straight sofas with armchairs across a table,
+// armchair pairs, bistro clusters, counters along the walls. Everything stays editable afterwards.
+// items: [{ f (event furniture entry), qty }]. Returns { placedCount, missing }.
+export function composeDesign(items) {
+  const venue = state.venue;
+  if (!venue) throw new Error('Upload a venue plan first.');
+  const segs = visibleSegments(venue), walls = segs.filter((s) => /wall/i.test(s.layer));
+  const use = walls.length ? walls : segs;
+  const b = use.length ? use.reduce((o, s) => ({ minX: Math.min(o.minX, s.x1, s.x2), maxX: Math.max(o.maxX, s.x1, s.x2), minY: Math.min(o.minY, s.y1, s.y2), maxY: Math.max(o.maxY, s.y1, s.y2) }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity }) : venueBounds(venue);
+  const W = b.maxX - b.minX, H = b.maxY - b.minY;
+
+  const pool = {};
+  for (const { f, qty } of items) for (let i = 0; i < qty; i++) (pool[f.kind] ||= []).push(f);
+  const take = (...kinds) => { for (const k of kinds) if (pool[k]?.length) return pool[k].shift(); return null; };
+  const left = () => Object.values(pool).reduce((s, a) => s + a.length, 0);
+  const armchairKinds = ['club', 'slipper', 'loungeChair', 'armchair'];
+  const isArmchair = (f) => armchairKinds.includes(f.kind) || (f.kind === 'channelSofa' && f.w < 120);
+  // channel armchair is stored as channelSofa — move narrow ones to the armchair pool
+  if (pool.channelSofa) { pool.armchair = [...(pool.armchair || []), ...pool.channelSofa.filter(isArmchair)]; pool.channelSofa = pool.channelSofa.filter((f) => !isArmchair(f)); }
+
+  // A cluster = members relative to its centre (rot: 0 means back toward +y, facing -y).
+  const clusters = [];
+  const table = () => take('lowTable');
+  const addPoufs = (members, n, rx, ry) => { for (let i = 0; i < n; i++) { const p = take('pouf'); if (!p) break; members.push({ f: p, dx: i % 2 ? rx : -rx, dy: ry, rot: 0 }); } };
+
+  // 1. curved sofas: facing pairs around a table, poufs closing the circle
+  while (pool.curvedSofa?.length) {
+    const a = take('curvedSofa'), bb = take('curvedSofa'), m = [];
+    const off = a.d / 2 + 35;
+    m.push({ f: a, dx: 0, dy: off, rot: 0 });
+    if (bb) m.push({ f: bb, dx: 0, dy: -off, rot: 180 });
+    const t = table(); if (t) m.push({ f: t, dx: 0, dy: bb ? 0 : off - a.d / 2 - t.d / 2 - 45, rot: 0 });
+    addPoufs(m, 2, a.w / 2 - 10, bb ? 0 : -20);
+    clusters.push(m);
+  }
+  // 2. straight sofas with armchairs across a table
+  while (pool.channelSofa?.length || pool.sofa?.length || pool.bench?.length) {
+    const s = take('channelSofa', 'sofa', 'bench'), m = [{ f: s, dx: 0, dy: s.d / 2 + 50, rot: 0 }];
+    const t = table(); if (t) m.push({ f: t, dx: 0, dy: 0, rot: 0 });
+    for (const dx of [-s.w / 4, s.w / 4]) { const c = take('armchair', 'club', 'slipper', 'loungeChair'); if (c) m.push({ f: c, dx, dy: -(c.d / 2 + 60), rot: 180 }); }
+    clusters.push(m);
+  }
+  // 3. armchairs in facing pairs (a conversation corner)
+  while (armchairKinds.some((k) => pool[k]?.length)) {
+    const a = take(...armchairKinds), c = take(...armchairKinds), m = [{ f: a, dx: 0, dy: a.d / 2 + 45, rot: 0 }];
+    if (c) m.push({ f: c, dx: 0, dy: -(c.d / 2 + 45), rot: 180 });
+    const t = table(); if (t) m.push({ f: t, dx: 0, dy: 0, rot: 0 });
+    else if (c) { m[0].dy -= 15; m[1].dy += 15; }
+    addPoufs(m, 1, (a.w / 2 + 40), 0);
+    clusters.push(m);
+  }
+  // 4. bistro / cocktail tables in groups of 3, with chairs if any were chosen
+  while (pool.bistro?.length || pool.cocktail?.length) {
+    const m = [];
+    for (let i = 0; i < 3; i++) { const t = take('bistro', 'cocktail'); if (!t) break; m.push({ f: t, dx: (i - 1) * 140, dy: 0, rot: 0 }); for (const s of [1, -1]) { const ch = take('chair'); if (ch) m.push({ f: ch, dx: (i - 1) * 140, dy: s * 60, rot: s > 0 ? 0 : 180 }); } }
+    clusters.push(m);
+  }
+  // 5. whatever is left (low tables, poufs, chairs…) as small groups
+  for (const k of Object.keys(pool)) while (pool[k].length && !['counter', 'bar', 'buffet', 'stage', 'danceFloor', 'cushion'].includes(k)) {
+    const m = []; for (let i = 0; i < 3 && pool[k].length; i++) { const f = pool[k].shift(); m.push({ f, dx: (i - 1) * (f.w + 50), dy: 0, rot: 0 }); }
+    clusters.push(m);
+  }
+
+  // Packing: walls first for counters / bars / buffets, then clusters from the middle outward.
+  const rects = [], placed = [];
+  const fpr = (f, rot) => (rot % 180 === 0 ? { hw: f.w / 2, hd: f.d / 2 } : { hw: f.d / 2, hd: f.w / 2 });
+  const free = (r, gap) => r.x0 - gap >= b.minX && r.x1 + gap <= b.maxX && r.y0 - gap >= b.minY && r.y1 + gap <= b.maxY
+    && !segs.some((s) => segHitsRect(s, { x0: r.x0 - 5, x1: r.x1 + 5, y0: r.y0 - 5, y1: r.y1 + 5 }))
+    && !rects.some((o) => r.x0 - gap < o.x1 && r.x1 + gap > o.x0 && r.y0 - gap < o.y1 && r.y1 + gap > o.y0);
+  const tryCluster = (m, cx, cy, turn, gap) => {
+    const rot = (r) => (r + turn) % 360, a = (turn * Math.PI) / 180;
+    const placedM = m.map((o) => ({ ...o, x: cx + o.dx * Math.cos(a) - o.dy * Math.sin(a), y: cy + o.dx * Math.sin(a) + o.dy * Math.cos(a), r: rot(o.rot) }));
+    const boxes = placedM.map((o) => { const { hw, hd } = fpr(o.f, o.r); return { x0: o.x - hw, x1: o.x + hw, y0: o.y - hd, y1: o.y + hd }; });
+    const all = boxes.reduce((u, r) => ({ x0: Math.min(u.x0, r.x0), x1: Math.max(u.x1, r.x1), y0: Math.min(u.y0, r.y0), y1: Math.max(u.y1, r.y1) }));
+    if (!free(all, gap)) return false;
+    rects.push(all);
+    for (const o of placedM) placed.push({ id: newId('p'), itemId: o.f.id, x: Math.round(o.x), y: Math.round(o.y), rot: o.r });
+    return true;
+  };
+  // wall pieces
+  let missing = 0;
+  for (const k of ['counter', 'bar', 'buffet']) (pool[k] || []).forEach((f, i) => {
+    const spots = [];
+    for (let x = b.minX + f.w / 2 + 80; x < b.maxX - f.w / 2 - 80; x += 40) spots.push([x, b.maxY - f.d / 2 - 30, 0], [x, b.minY + f.d / 2 + 30, 180]);
+    spots.sort((p, q) => Math.abs(p[0] - (b.minX + b.maxX) / 2) - Math.abs(q[0] - (b.minX + b.maxX) / 2));
+    if (!spots.some(([x, y, r]) => tryCluster([{ f, dx: 0, dy: 0, rot: 0 }], x, y, r, 40))) missing++;
+  });
+  // islands: candidate centres on a grid, centre-out, alternating orientation for a livelier composition
+  const cand = [];
+  for (let y = b.minY + 100; y < b.maxY - 100; y += 30) for (let x = b.minX + 100; x < b.maxX - 100; x += 30) cand.push([x, y]);
+  const cx0 = (b.minX + b.maxX) / 2, cy0 = (b.minY + b.maxY) / 2;
+  cand.sort((p, q) => Math.hypot((p[0] - cx0) / W, (p[1] - cy0) / H) - Math.hypot((q[0] - cx0) / W, (q[1] - cy0) / H));
+  clusters.sort((p, q) => q.length - p.length);
+  clusters.forEach((m, i) => {
+    const turns = W >= H ? (i % 2 ? [90, 0] : [0, 90]) : [90, 0];
+    if (!turns.some((tn) => cand.some(([x, y]) => tryCluster(m, x, y, tn, 75)))) missing += m.length;
+  });
+  state.placed = [...state.placed.filter((p) => p.locked), ...placed];
+  return { placedCount: placed.length, missing, left: left() };
+}

@@ -81,7 +81,9 @@ async function addFiles(files, toast) {
         const r = await readMoodBoard(f);
         m.images.push(...r.images);
         m.palette = dedupe([...m.palette, ...r.palette]).slice(0, 14);
+        m.pptxText = r.text || '';
         toast(t('moodLoaded', { images: r.images.length, colors: r.palette.length }));
+        document.dispatchEvent(new CustomEvent('mood-pptx', { detail: { images: r.images, text: r.text || '' } }));
       } else if (f.type.startsWith('image/')) {
         m.images.push(await blobToDataUrl(f, 1000));
       }

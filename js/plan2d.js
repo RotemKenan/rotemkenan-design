@@ -245,11 +245,22 @@ function sat(A, B) {
   }
   return true;
 }
+// A curved sofa is checked as 8 small blocks along its arc, so its open middle stays free (tables go there).
+function shapesOf(p, it) {
+  if (it.kind !== 'curvedSofa') return [polyOf(p, it)];
+  const g = curvedGeom(it), n = 8, a = (p.rot * Math.PI) / 180, out = [];
+  for (let i = 0; i < n; i++) {
+    const t0 = g.a0 + ((g.a1 - g.a0) * i) / n, t1 = g.a0 + ((g.a1 - g.a0) * (i + 1)) / n;
+    const pts = [[g.r, t0], [g.R, t0], [g.R, t1], [g.r, t1]].map(([r, t]) => ({ x: r * Math.cos(t), y: g.cy + r * Math.sin(t) }));
+    out.push(pts.map((q) => ({ x: p.x + q.x * Math.cos(a) - q.y * Math.sin(a), y: p.y + q.x * Math.sin(a) + q.y * Math.cos(a) })));
+  }
+  return out;
+}
 export function overlaps() {
   const bad = new Set(), list = state.placed.map((p) => ({ p, it: itemOf(p) })).filter((o) => o.it && o.it.kind !== 'danceFloor');
-  const polys = list.map((o) => polyOf(o.p, o.it));
+  const shapes = list.map((o) => shapesOf(o.p, o.it));
   for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++)
-    if (sat(polys[i], polys[j])) { bad.add(list[i].p.id); bad.add(list[j].p.id); }
+    if (shapes[i].some((A) => shapes[j].some((B) => sat(A, B)))) { bad.add(list[i].p.id); bad.add(list[j].p.id); }
   return bad;
 }
 function wallDistance(p, it) {

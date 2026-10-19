@@ -6,7 +6,8 @@ import {
 import { parseVenue, demoVenue, exportDxf, looksLikeDxf, VENUE_LIBRARY } from './dxf.js';
 import { blobToDataUrl } from './pptx.js';
 import { traceImage, strokesToSegments, dimensionsFor, readDimensions, toMetres } from './trace.js';
-import { suggestLayout } from './layout.js';
+import { suggestLayout, composeDesign } from './layout.js';
+import { findInventory, seatsOf } from './match.js';
 import * as plan from './plan2d.js';
 import * as view3d from './view3d.js';
 import { initInventory, renderInventory, showPreview } from './inventory.js';
@@ -91,7 +92,7 @@ function renderBrief() {
   $('briefType').value = state.brief.type || 'wedding';
 }
 function renderStats() {
-  const seats = state.placed.reduce((s, p) => s + (itemOf(p)?.seats || 0), 0);
+  const seats = state.placed.reduce((s, p) => s + seatsOf(itemOf(p)), 0); // tables' chairs + people on sofas, armchairs, poufs, chairs
   const g = +state.brief.guests || 0, lines = [];
   if (g) lines.push(`<b>${t('seatsOf', { seats, guests: g })}</b> — ${seats >= g ? `<span class="ok">${t('seatsOk')}</span>` : `<span class="warn">${t('seatsShort', { n: g - seats })}</span>`}`);
   else if (seats) lines.push(t('seatsOnly', { seats }));
@@ -289,6 +290,64 @@ function renderInspector() {
   box.querySelector('[data-a=del]').onclick = () => plan.deleteSelection();
 }
 document.querySelectorAll('[data-align]').forEach((b) => (b.onclick = () => plan.align(b.dataset.align)));
+
+// ---------- base design from the mood board ----------
+let pickRows = [];
+const pickLabel = (inv) => itemName({ ...inv, invId: inv.id });
+function renderPick() {
+  const list = $('pickList');
+  list.innerHTML = pickRows.length ? '' : `<p class="hint">${t('pickNone')}</p>`;
+  pickRows.forEach((r) => {
+    const row = document.createElement('label'); row.className = 'pick-row';
+    row.innerHTML = `<input type="checkbox" ${r.on ? 'checked' : ''}><img src="${r.inv.photo}" alt=""><span>${esc(pickLabel(r.inv))}<small>${t({ photo: 'pickFromPhoto', text: 'pickFromText', event: 'pickFromEvent', manual: 'add' }[r.from] || 'add')} · ${r.inv.w}×${r.inv.d}${seatsOf(r.inv) ? ' · ' + t('seatEstimate', { n: seatsOf(r.inv) }) : ''}</small></span><input type="number" min="1" value="${r.qty}">`;
+    row.querySelector('[type=checkbox]').onchange = (e) => { r.on = e.target.checked; renderPickSeats(); };
+    row.querySelector('[type=number]').onchange = (e) => { r.qty = Math.max(1, +e.target.value || 1); renderPickSeats(); };
+    list.append(row);
+  });
+  $('pickAdd').innerHTML = INVENTORY.map((it, i) => `<option value="${i}">${esc(pickLabel(it))}</option>`).join('');
+  renderPickSeats();
+}
+function renderPickSeats() {
+  const n = pickRows.filter((r) => r.on).reduce((s, r) => s + seatsOf(r.inv) * r.qty, 0);
+  $('pickSeats').textContent = n ? t('seatsAbout', { n }) : '';
+}
+function openPick(rows) { pickRows = rows; renderPick(); $('pickDialog').showModal(); }
+document.addEventListener('mood-pptx', async (e) => {
+  toast(t('findingPieces'));
+  const found = await findInventory(e.detail.images, e.detail.text).catch(() => []);
+  openPick(found.map((f) => ({ inv: f.inv, qty: f.count || 1, on: true, from: f.from })));
+});
+$('composeFromMood').addEventListener('click', async () => {
+  // pieces already chosen for this event, or else whatever the mood board pictures show
+  let rows = state.furniture.filter((f) => f.invId).map((f) => ({ inv: INVENTORY.find((i) => i.id === f.invId), qty: Math.max(1, f.qty), on: true, from: 'event' })).filter((r) => r.inv);
+  if (!rows.length && state.mood.images.length) {
+    toast(t('findingPieces'));
+    rows = (await findInventory(state.mood.images, state.mood.pptxText || '').catch(() => [])).map((f) => ({ inv: f.inv, qty: f.count || 1, on: true, from: f.from }));
+  }
+  openPick(rows);
+});
+$('pickAddBtn').onclick = () => {
+  const inv = INVENTORY[$('pickAdd').value]; if (!inv) return;
+  const r = pickRows.find((x) => x.inv.id === inv.id);
+  if (r) { r.qty++; r.on = true; } else pickRows.push({ inv, qty: 1, on: true, from: 'manual' });
+  renderPick();
+};
+$('pickClose').onclick = () => $('pickDialog').close();
+function applyPick() {
+  const chosen = pickRows.filter((r) => r.on);
+  const items = chosen.map((r) => { const f = furnitureFor(r.inv); f.qty = r.qty; return { f, qty: r.qty }; });
+  emit('furniture');
+  return items;
+}
+$('pickOnly').onclick = () => { applyPick(); $('pickDialog').close(); };
+$('pickCompose').onclick = () => {
+  const items = applyPick();
+  if (!state.venue) { $('pickDialog').close(); toast(t('needVenue')); return; }
+  const r = composeDesign(items);
+  $('pickDialog').close();
+  emit('placed'); showView('plan'); plan.fit();
+  toast(r.missing ? t('composedMissing', { m: r.missing }) : t('composed', { n: r.placedCount }));
+};
 
 // ---------- layout / export ----------
 $('autoLayout').addEventListener('click', () => {

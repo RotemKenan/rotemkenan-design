@@ -121,6 +121,7 @@
       <section>
         <h3><span class="step">5</span> <span data-i18n="layoutTitle">Layout</span></h3>
         <button id="autoLayout" class="primary" data-i18n="suggest">✨ Suggest a layout</button>
+        <button id="composeFromMood" data-i18n="composeFromMood">🪄 Base design from my selection</button>
         <button id="clearLayout" class="ghost" data-i18n="clear">Clear placed items</button>
         <button id="exportDxf" data-i18n="downloadDxf">Download DXF plan</button>
       </section>
@@ -235,6 +236,19 @@
       </div>
     </section>
   </main>
+
+  <dialog id="pickDialog" class="pick-dialog">
+    <h2 data-i18n="pickTitle">Furniture found in your mood board</h2>
+    <p class="hint" data-i18n="pickHint">Check the pieces and quantities, add anything missing, then let the app lay out a base design for you.</p>
+    <div id="pickList" class="pick-list"></div>
+    <div class="row"><select id="pickAdd"></select><button id="pickAddBtn" data-i18n="add">Add</button></div>
+    <div id="pickSeats" class="hint"></div>
+    <div class="row-actions">
+      <button id="pickCompose" class="primary" data-i18n="composeBtn">✨ Create base design</button>
+      <button id="pickOnly" data-i18n="pickOnly">Add to event only</button>
+      <button id="pickClose" class="ghost" data-i18n="cancel">Cancel</button>
+    </div>
+  </dialog>
 
   <div id="toast" class="toast"></div>
   <script type="module" src="js/main.js"></script>
