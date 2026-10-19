@@ -24,3 +24,11 @@ It's a static site — no install. Serve the folder and open it:
 python3 -m http.server 8000   # then open http://localhost:8000
 ```
 Or enable GitHub Pages on this repository to use it from any device.
+
+## Inventory, 3D models and DXF blocks
+The **Inventory** tab lists every piece with its measurements (orange = estimate, still to measure).
+Print the measuring sheet, measure with a tape, type the real sizes and tick *Measured*: the plan, DXF and 3D update.
+Each piece has a textured 3D model (**GLB**, metres) and a top-view CAD block (**DXF**, cm, base point = centre,
+seat backs toward +Y). Ready-made copies are in `assets/models/` (`3d/`, `dwg-dxf/`, `inventory.csv`);
+"Download all models" rebuilds them with your latest measurements. The event plan export now places each piece
+as a block, so in AutoCAD every item can be selected, moved and counted as one object.

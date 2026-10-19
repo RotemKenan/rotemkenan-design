@@ -90,7 +90,7 @@ export function suggestLayout() {
 
   // 5. Lounge corners near the entrance.
   const lounge = ['sofa', 'armchair', 'curvedSofa', 'channelSofa', 'club', 'slipper', 'lowTable'].flatMap(byKind);
-  lounge.forEach((f) => { for (let i = 0; i < f.qty; i++) scan(f, along(f.d / 2 + 80, H / 3, 25).flatMap((y) => along(f.w / 2 + 60, W / 3, 30).flatMap((x) => [[x, y], [W - x, y]])), 0, 15); });
+  lounge.forEach((f) => { for (let i = 0; i < f.qty; i++) scan(f, along(f.d / 2 + 80, H / 3, 25).flatMap((y) => along(f.w / 2 + 60, W / 3, 30).flatMap((x) => [[x, y], [W - x, y]])), 180, 15); });
   [...byKind('cocktail'), ...byKind('bistro')].forEach((f) => { for (let i = 0; i < f.qty; i++) scan(f, along(220, H / 2, 40).flatMap((y) => along(W / 2 - 400, W / 2 + 400, 60).map((x) => [x, y])), 0, 60); });
 
   // 6. Dining tables: fill the room on a grid from the dance floor outward.

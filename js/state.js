@@ -17,23 +17,42 @@ export const PRESETS = [
   { kind: 'buffet', name: 'Buffet station', w: 300, d: 80, h: 90, seats: 0, color: '#f4efe6' },
 ];
 
-// Rotem's own inventory. Dimensions marked ~ are estimates — adjust in the furniture list.
+// Rotem's own inventory. Sizes in cm. `measured: false` = estimate, waiting for a tape-measure check
+// in the Inventory tab. Edits are kept in this browser and can be exported / imported as JSON.
 const I = (photo) => `assets/inventory/${photo}.jpg`;
-export const INVENTORY = [
-  { kind: 'lowTable', shape: 'round', legs: 'cabriole', name: 'Low round table, black cabriole', w: 90, d: 90, h: 45, seats: 0, color: '#1b1918', photo: I('low-round-black') },
-  { kind: 'lowTable', shape: 'round', legs: 'cabriole', cloth: '#ece5d8', name: 'Low round table + linen', w: 90, d: 90, h: 45, seats: 0, color: '#1b1918', photo: I('low-round-linen') },
-  { kind: 'lowTable', shape: 'square', legs: 'cabriole', name: 'Low square table, black cabriole', w: 80, d: 80, h: 45, seats: 0, color: '#1b1918', photo: I('low-square-black') },
-  { kind: 'lowTable', shape: 'square', legs: 'cabriole', cloth: '#ece5d8', name: 'Low square table + linen', w: 80, d: 80, h: 45, seats: 0, color: '#1b1918', photo: I('low-square-linen') },
-  { kind: 'bistro', shape: 'round', name: 'Bistro table, black', w: 70, d: 70, h: 75, seats: 2, color: '#1b1918', photo: I('bistro-black') },
-  { kind: 'bistro', shape: 'round', name: 'Bistro table, walnut top', w: 70, d: 70, h: 75, seats: 2, color: '#8a5f3c', photo: I('bistro-walnut') },
-  { kind: 'bistro', shape: 'round', cloth: '#ece5d8', candle: true, name: 'Bistro + linen & hurricane', w: 70, d: 70, h: 75, seats: 2, color: '#1b1918', photo: I('bistro-candle') },
-  { kind: 'club', name: 'Vintage leather armchair', w: 80, d: 85, h: 90, seats: 0, color: '#7a4526', photo: I('club-leather') },
-  { kind: 'channelSofa', name: 'Channel velvet sofa, chocolate', w: 200, d: 73, h: 80, seats: 0, color: '#3b2419', photo: I('channel-sofa') },
-  { kind: 'curvedSofa', name: 'Curved velvet sofa, green', w: 346, d: 120, h: 80, seats: 0, color: '#1f5a3c', photo: I('curved-green') },
-  { kind: 'curvedSofa', name: 'Curved velvet sofa, rust', w: 346, d: 120, h: 80, seats: 0, color: '#8a3f22', photo: I('curved-rust') },
-  { kind: 'slipper', name: 'Velvet slipper chair, rust', w: 60, d: 70, h: 80, seats: 0, color: '#7e3a1f', photo: I('slipper-rust') },
-  { kind: 'slipper', name: 'Velvet slipper chair, green', w: 60, d: 70, h: 80, seats: 0, color: '#5f7744', photo: I('slipper-green') },
-];
+const DEFAULT_INVENTORY = [
+  { id: 'low-round-black', kind: 'lowTable', shape: 'round', legs: 'cabriole', name: 'Low round table, black cabriole', w: 90, d: 90, h: 45, seatH: 0, color: '#1b1918', finish: 'lacquer' },
+  { id: 'low-round-linen', kind: 'lowTable', shape: 'round', legs: 'cabriole', cloth: '#ece5d8', name: 'Low round table + linen', w: 90, d: 90, h: 45, seatH: 0, color: '#1b1918', finish: 'lacquer', notes: 'Cloth approx. 90×90 cm, laid diagonally' },
+  { id: 'low-square-black', kind: 'lowTable', shape: 'square', legs: 'cabriole', name: 'Low square table, black cabriole', w: 80, d: 80, h: 45, seatH: 0, color: '#1b1918', finish: 'lacquer' },
+  { id: 'low-square-linen', kind: 'lowTable', shape: 'square', legs: 'cabriole', cloth: '#ece5d8', name: 'Low square table + linen', w: 80, d: 80, h: 45, seatH: 0, color: '#1b1918', finish: 'lacquer' },
+  { id: 'bistro-black', kind: 'bistro', shape: 'round', name: 'Bistro table, black', w: 70, d: 70, h: 75, seatH: 0, seats: 2, color: '#1b1918', finish: 'lacquer' },
+  { id: 'bistro-walnut', kind: 'bistro', shape: 'round', name: 'Bistro table, walnut top', w: 70, d: 70, h: 75, seatH: 0, seats: 2, color: '#b07a4f', finish: 'walnut', supplier: 'Harmonia', sku: '3201-24' },
+  { id: 'bistro-candle', kind: 'bistro', shape: 'round', cloth: '#ece5d8', candle: true, name: 'Bistro + linen & hurricane', w: 70, d: 70, h: 75, seatH: 0, seats: 2, color: '#1b1918', finish: 'lacquer' },
+  { id: 'club-leather', kind: 'club', name: 'Vintage leather armchair', w: 80, d: 85, h: 90, seatH: 45, color: '#7a4526', finish: 'leather', supplier: 'Harmonia', sku: '3451' },
+  { id: 'channel-sofa', kind: 'channelSofa', name: 'Channel velvet sofa, chocolate', w: 200, d: 73, h: 80, seatH: 45, color: '#3b2419', finish: 'velvet', supplier: 'Sugoy Design', known: ['d', 'h'] },
+  { id: 'curved-green', kind: 'curvedSofa', name: 'Curved velvet sofa, green', w: 346, d: 120, h: 80, seatH: 45, color: '#1f5a3c', finish: 'velvet', supplier: 'Sugoy Design', innerW: 200, notes: 'Outer arc Ø346, inner arc Ø200 (supplier)', known: ['w', 'innerW'] },
+  { id: 'curved-rust', kind: 'curvedSofa', name: 'Curved velvet sofa, rust', w: 346, d: 120, h: 80, seatH: 45, color: '#8a3f22', finish: 'velvet', supplier: 'Sugoy Design', innerW: 200, notes: 'Outer arc Ø346, inner arc Ø200 (supplier)', known: ['w', 'innerW'] },
+  { id: 'slipper-rust', kind: 'slipper', name: 'Velvet slipper chair, rust', w: 60, d: 70, h: 80, seatH: 45, color: '#7e3a1f', finish: 'velvet', supplier: 'Sugoy Design' },
+  { id: 'slipper-green', kind: 'slipper', name: 'Velvet slipper chair, green', w: 60, d: 70, h: 80, seatH: 45, color: '#5f7744', finish: 'velvet', supplier: 'Sugoy Design' },
+].map((it) => ({ seats: 0, measured: false, supplier: '', sku: '', notes: '', stock: 1, known: [], ...it, photo: I(it.id) }));
+
+const INV_KEY = 'rk-inventory';
+export const INVENTORY = (() => {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(INV_KEY) || '{}'); } catch { /* private mode */ }
+  const list = DEFAULT_INVENTORY.map((d) => ({ ...d, ...(saved[d.id] || {}) }));
+  for (const [id, it] of Object.entries(saved)) if (!list.some((d) => d.id === id)) list.push(it); // pieces added later
+  return list;
+})();
+
+export function saveInventory() {
+  try { localStorage.setItem(INV_KEY, JSON.stringify(Object.fromEntries(INVENTORY.map((it) => [it.id, it])))); } catch { /* storage blocked */ }
+  // keep event furniture copies in sync with the measured sizes
+  for (const f of state.furniture) {
+    const src = INVENTORY.find((it) => it.id === f.invId);
+    if (src) Object.assign(f, { w: src.w, d: src.d, h: src.h, seatH: src.seatH, color: src.color, finish: src.finish, name: src.name });
+  }
+}
 
 export const isRound = (it) => it.shape === 'round' || ['roundTable', 'cocktail', 'plant'].includes(it.kind);
 
@@ -67,7 +86,7 @@ export function load(json) {
 }
 
 export function addFurniture(preset, qty = 1) {
-  const f = { id: newId('f'), qty, ...structuredClone(preset) };
+  const f = { ...structuredClone(preset), id: newId('f'), qty, invId: preset.id && preset.photo ? preset.id : undefined };
   state.furniture.push(f);
   emit('furniture');
   return f;

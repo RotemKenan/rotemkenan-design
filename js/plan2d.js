@@ -1,6 +1,6 @@
 // Interactive 2D plan: venue lines + furniture, drag / rotate / duplicate / delete.
 import { state, emit, itemOf, newId, isRound } from './state.js';
-import { venueBounds, visibleSegments, footprint } from './dxf.js';
+import { venueBounds, visibleSegments, footprint, itemOutline } from './dxf.js';
 
 const canvas = document.getElementById('planCanvas');
 const ctx = canvas.getContext('2d');
@@ -87,6 +87,12 @@ function drawItem(p, it, selected) {
   else if (round) ctx.arc(0, 0, w / 2, 0, Math.PI * 2); else ctx.rect(-w / 2, -d / 2, w, d);
   if (it.kind === 'danceFloor') ctx.setLineDash([6, 4]);
   ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+  if (it.invId) { // same detail lines as the DXF block
+    ctx.lineWidth = 0.8; ctx.strokeStyle = selected ? '#b08d57' : 'rgba(255,255,255,.7)';
+    ctx.beginPath();
+    for (const e of itemOutline(it)) if (e.t === 'LINE') { ctx.moveTo(e.x1 * view.scale, -e.y1 * view.scale); ctx.lineTo(e.x2 * view.scale, -e.y2 * view.scale); }
+    ctx.stroke();
+  }
 
   if (view.scale > 0.15) {
     ctx.rotate((p.rot * Math.PI) / 180);
@@ -97,10 +103,10 @@ function drawItem(p, it, selected) {
   ctx.restore();
 }
 
-// Curved sofa: an arc band whose chord = w and depth = d; opening faces +y (item-local).
+// Curved sofa: arc band, outer Ø = w, inner Ø = innerW. Like every seat, the back is at +y and it faces -y.
 export function curvedGeom(it) {
-  const R = it.w / 2, r = Math.max(10, R - 55), span = Math.PI / 3;
-  return { R, r, a0: -Math.PI / 2 - span, a1: -Math.PI / 2 + span, cy: -it.d / 2 + R };
+  const R = it.w / 2, r = Math.min(R - 20, (it.innerW || it.w - 110) / 2), span = Math.PI / 3;
+  return { R, r, a0: Math.PI / 2 - span, a1: Math.PI / 2 + span, cy: it.d / 2 - R };
 }
 function curvedPath(c, it, k) {
   const g = curvedGeom(it);

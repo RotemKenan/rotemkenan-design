@@ -4,6 +4,7 @@ import { readMoodBoard } from './pptx.js';
 import { suggestLayout } from './layout.js';
 import * as plan from './plan2d.js';
 import * as view3d from './view3d.js';
+import { initInventory, renderInventory, showPreview } from './inventory.js';
 
 const $ = (id) => document.getElementById(id);
 let activeSwatch = null;
@@ -29,6 +30,8 @@ document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('cli
   $('planView').classList.toggle('active', currentView === 'plan');
   $('threeView').classList.toggle('active', currentView === '3d');
   $('moodView').classList.toggle('active', currentView === 'mood');
+  $('invView').classList.toggle('active', currentView === 'inventory');
+  if (currentView === 'inventory') { renderInventory(); showPreview(); }
   if (currentView === 'plan') plan.resize();
   if (currentView === '3d') { view3d.rebuild(); view3d.resize(); }
 }));
@@ -98,11 +101,14 @@ $('addPreset').addEventListener('click', () => {
   addFurniture(v === 'custom' ? { kind: 'custom', name: 'Custom item', w: 100, d: 60, h: 80, seats: 0, color: '#d8cbb8' } : PRESETS[v], 1);
 });
 
-$('inventory').innerHTML = INVENTORY.map((p, i) => `<button class="inv" data-i="${i}" title="Add to this event"><img src="${p.photo}" alt="">${p.name}</button>`).join('');
+const renderGallery = () => ($('inventory').innerHTML = INVENTORY.map((p, i) => `<button class="inv" data-i="${i}" title="Add to this event (${p.w}×${p.d}×${p.h} cm)"><img src="${p.photo}" alt="">${p.name}</button>`).join(''));
+renderGallery();
+document.addEventListener('inventory-changed', renderGallery);
+initInventory(toast);
 $('inventory').addEventListener('click', (e) => {
   const b = e.target.closest('.inv'); if (!b) return;
   const p = INVENTORY[b.dataset.i];
-  const existing = state.furniture.find((f) => f.name === p.name);
+  const existing = state.furniture.find((f) => f.invId === p.id);
   if (existing) { existing.qty++; emit('furniture'); toast(`${p.name}: ${existing.qty}`); } else addFurniture(p, 1);
 });
 

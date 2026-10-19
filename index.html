@@ -26,6 +26,7 @@
       <button data-view="plan" class="active">2D Plan</button>
       <button data-view="3d">3D View</button>
       <button data-view="mood">Mood Board</button>
+      <button data-view="inventory">Inventory</button>
     </nav>
     <div class="actions">
       <button id="saveProject">Save</button>
@@ -100,6 +101,27 @@
           </label>
           <button id="renderShot" class="primary">📷 Save render</button>
           <button id="renderAll">Render all angles</button>
+        </div>
+      </div>
+      <div id="invView" class="view">
+        <div class="inv-layout">
+          <div class="inv-table-wrap">
+            <div class="inv-head">
+              <h2>Inventory &amp; measurements</h2>
+              <p class="hint">Measure each piece at its widest points (cm). W = width side to side, D = depth front to back, H = total height, Seat = seat height. Tick “Measured” once checked with a tape — the plan, DXF and 3D all update.</p>
+              <div class="row-actions">
+                <button id="invPrint">🖨 Print measuring sheet</button>
+                <button id="invAllZip" class="primary">⬇ Download all models (GLB + DXF)</button>
+                <button id="invExport">Export inventory</button>
+                <label class="btn">Import inventory<input type="file" id="invImport" accept=".json" hidden /></label>
+              </div>
+            </div>
+            <table class="inv-table"><thead><tr><th></th><th>Piece</th><th>W</th><th>D</th><th>H</th><th>Seat</th><th>Ø inner</th><th>Finish</th><th>Stock</th><th>Supplier / SKU</th><th>Measured</th><th>Files</th></tr></thead><tbody id="invRows"></tbody></table>
+          </div>
+          <div class="inv-preview">
+            <div id="invPreviewHost"></div>
+            <div id="invPreviewInfo" class="inv-info"></div>
+          </div>
         </div>
       </div>
       <div id="moodView" class="view">
