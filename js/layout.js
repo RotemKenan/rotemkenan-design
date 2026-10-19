@@ -85,7 +85,7 @@ export function suggestLayout() {
   head.forEach((f) => { for (let i = 0; i < f.qty; i++) scan(f, headSpots, 0); });
 
   // 4. Bar & buffet against the side walls.
-  each('bar', (f, i) => scan(f, along(H * 0.35, H - 100, 25).map((y) => [i % 2 ? W - f.d / 2 - 40 : f.d / 2 + 40, y]), 90));
+  ['bar', 'counter'].forEach((k) => each(k, (f, i) => scan(f, along(H * 0.35, H - 100, 25).map((y) => [i % 2 ? W - f.d / 2 - 40 : f.d / 2 + 40, y]), 90)));
   each('buffet', (f, i) => scan(f, along(H * 0.4, H - 100, 25).map((y) => [i % 2 ? f.d / 2 + 40 : W - f.d / 2 - 40, y]), 90));
 
   // 5. Lounge corners near the entrance.

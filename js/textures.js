@@ -37,6 +37,8 @@ const PAINTERS = {
     return 0.62 + 0.18 * ring * ring + 0.12 * n.soft(u, v) + 0.06 * n.fine(u * 0.2, v);
   },
   lacquer(u, v, n) { return 0.92 + 0.08 * n.soft(u, v); },
+  // dark stone with pale veins (tinted by the piece colour)
+  marble(u, v, n) { const vein = Math.abs(Math.sin((u * 3 + v * 1.4 + n.soft(u, v) * 2.2) * Math.PI)); return 0.55 + 0.1 * n.fine(u, v) + (vein > 0.97 ? 0.9 : vein > 0.93 ? 0.3 : 0); },
   iron(u, v, n) { return 0.75 + 0.2 * n.fine(u, v) + 0.05 * n.soft(u, v); },
 };
 
@@ -46,6 +48,7 @@ const PBR = {
   linen: { roughness: 0.95 },
   walnut: { roughness: 0.55, clearcoat: 0.2 },
   lacquer: { roughness: 0.25, clearcoat: 0.6 },
+  marble: { roughness: 0.15, clearcoat: 0.9 },
   iron: { roughness: 0.6, metalness: 0.5 },
 };
 

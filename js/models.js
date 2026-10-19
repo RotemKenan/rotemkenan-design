@@ -184,6 +184,16 @@ export function buildItem(it, { chairs = true } = {}) {
       }
       break;
     }
+    case 'counter': { // wooden counter on a recessed plinth, brass trim, black marble top
+      const wood = texMat('walnut', '#3a2a24', 2, { roughness: 0.5 }), brass = mat('#b8914a', { metalness: 0.85, roughness: 0.3 });
+      const top = 0.04, plinth = 0.12;
+      g.add(mesh(new THREE.BoxGeometry(w - 0.12, plinth, d - 0.12), wood, 0, plinth / 2, 0));
+      g.add(mesh(new THREE.BoxGeometry(w - 0.02, h - plinth - top, d - 0.02), wood, 0, plinth + (h - plinth - top) / 2, 0));
+      for (const y of [h - top - 0.16, plinth + 0.18]) g.add(mesh(new THREE.BoxGeometry(w, 0.025, d), brass, 0, y, 0));
+      g.add(mesh(new THREE.BoxGeometry(w + 0.02, top, d + 0.02), brass, 0, h - top / 2, 0));
+      g.add(mesh(new THREE.BoxGeometry(w - 0.03, 0.006, d - 0.03), texMat('marble', c, 2), 0, h + 0.003, 0));
+      break;
+    }
     case 'chair': {
       g.add(chair(c)); // back toward +y in plan, seat facing -y, like every seat
       break;
