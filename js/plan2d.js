@@ -1,5 +1,5 @@
 // Interactive 2D plan: venue lines + furniture, drag / rotate / duplicate / delete.
-import { state, emit, itemOf, newId } from './state.js';
+import { state, emit, itemOf, newId, isRound } from './state.js';
 import { venueBounds, visibleSegments, footprint } from './dxf.js';
 
 const canvas = document.getElementById('planCanvas');
@@ -69,7 +69,7 @@ function drawItem(p, it, selected) {
   ctx.translate(c.x, c.y);
   ctx.rotate((-p.rot * Math.PI) / 180);
   const w = it.w * view.scale, d = it.d * view.scale;
-  const round = ['roundTable', 'cocktail', 'plant'].includes(it.kind);
+  const round = isRound(it);
 
   // chairs
   if (it.seats > 0) {
@@ -83,7 +83,8 @@ function drawItem(p, it, selected) {
 
   ctx.fillStyle = it.color; ctx.strokeStyle = selected ? '#b08d57' : '#5a514a'; ctx.lineWidth = selected ? 2.5 : 1;
   ctx.beginPath();
-  if (round) ctx.arc(0, 0, w / 2, 0, Math.PI * 2); else ctx.rect(-w / 2, -d / 2, w, d);
+  if (it.kind === 'curvedSofa') curvedPath(ctx, it, view.scale);
+  else if (round) ctx.arc(0, 0, w / 2, 0, Math.PI * 2); else ctx.rect(-w / 2, -d / 2, w, d);
   if (it.kind === 'danceFloor') ctx.setLineDash([6, 4]);
   ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
 
@@ -96,6 +97,19 @@ function drawItem(p, it, selected) {
   ctx.restore();
 }
 
+// Curved sofa: an arc band whose chord = w and depth = d; opening faces +y (item-local).
+export function curvedGeom(it) {
+  const R = it.w / 2, r = Math.max(10, R - 55), span = Math.PI / 3;
+  return { R, r, a0: -Math.PI / 2 - span, a1: -Math.PI / 2 + span, cy: -it.d / 2 + R };
+}
+function curvedPath(c, it, k) {
+  const g = curvedGeom(it);
+  // canvas y is flipped relative to item space
+  c.arc(0, -g.cy * k, g.R * k, -g.a1, -g.a0);
+  c.arc(0, -g.cy * k, g.r * k, -g.a0, -g.a1, true);
+  c.closePath();
+}
+
 const shortName = (n) => n.split(/[ \/(]/)[0];
 function tableNumber(p) {
   const tables = state.placed.filter((q) => ['roundTable', 'rectTable'].includes(itemOf(q)?.kind));
@@ -106,7 +120,7 @@ function tableNumber(p) {
 export function chairPositions(it) {
   const out = [], n = it.seats;
   if (!n) return out;
-  if (it.kind === 'roundTable') {
+  if (isRound(it)) {
     const r = it.w / 2 + 25;
     for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2; out.push({ x: Math.cos(a) * r, y: Math.sin(a) * r, a: a + Math.PI / 2 }); }
   } else if (n <= 4) { // head table: one long side, facing the room

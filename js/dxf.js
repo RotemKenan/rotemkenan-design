@@ -1,6 +1,6 @@
 // DXF import (venue) and export (new design plan). Internal unit: cm.
 import DxfParser from 'dxf-parser';
-import { state, itemOf } from './state.js';
+import { state, itemOf, isRound } from './state.js';
 
 const INSUNITS_TO_CM = { 1: 2.54, 2: 30.48, 4: 0.1, 5: 1, 6: 100 };
 const NAMED_UNITS = { mm: 0.1, cm: 1, m: 100 };
@@ -92,7 +92,7 @@ export function exportDxf() {
   for (const p of state.placed) {
     const it = itemOf(p); if (!it) continue;
     const layer = layerName(it.kind);
-    if (it.kind === 'roundTable' || it.kind === 'cocktail' || it.kind === 'plant') {
+    if (isRound(it)) {
       g(0, 'CIRCLE'); g(8, layer); g(10, p.x.toFixed(2)); g(20, p.y.toFixed(2)); g(30, 0); g(40, (it.w / 2).toFixed(2));
     } else {
       const pts = footprint(p, it);

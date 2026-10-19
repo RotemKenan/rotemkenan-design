@@ -1,4 +1,4 @@
-import { state, PRESETS, onChange, emit, addFurniture, serialize, load } from './state.js';
+import { state, PRESETS, INVENTORY, onChange, emit, addFurniture, serialize, load } from './state.js';
 import { parseVenue, demoVenue, exportDxf } from './dxf.js';
 import { readMoodBoard } from './pptx.js';
 import { suggestLayout } from './layout.js';
@@ -49,7 +49,8 @@ $('demoVenue').addEventListener('click', () => {
   state.venue = demoVenue(); emit('venue'); plan.fit();
   if (!state.furniture.length) {
     addFurniture(PRESETS[0], 18); addFurniture(PRESETS[4], 1); addFurniture(PRESETS[10], 1);
-    addFurniture(PRESETS[9], 1); addFurniture(PRESETS[8], 1); addFurniture(PRESETS[6], 2); addFurniture(PRESETS[12], 4);
+    addFurniture(PRESETS[9], 1); addFurniture(PRESETS[8], 1); addFurniture(PRESETS[12], 4);
+    addFurniture(INVENTORY[10], 2); addFurniture(INVENTORY[12], 4); addFurniture(INVENTORY[1], 2); addFurniture(INVENTORY[6], 6);
   }
   toast('Demo hall loaded (28 × 18 m)');
 });
@@ -97,11 +98,20 @@ $('addPreset').addEventListener('click', () => {
   addFurniture(v === 'custom' ? { kind: 'custom', name: 'Custom item', w: 100, d: 60, h: 80, seats: 0, color: '#d8cbb8' } : PRESETS[v], 1);
 });
 
+$('inventory').innerHTML = INVENTORY.map((p, i) => `<button class="inv" data-i="${i}" title="Add to this event"><img src="${p.photo}" alt="">${p.name}</button>`).join('');
+$('inventory').addEventListener('click', (e) => {
+  const b = e.target.closest('.inv'); if (!b) return;
+  const p = INVENTORY[b.dataset.i];
+  const existing = state.furniture.find((f) => f.name === p.name);
+  if (existing) { existing.qty++; emit('furniture'); toast(`${p.name}: ${existing.qty}`); } else addFurniture(p, 1);
+});
+
 function renderFurniture() {
   const list = $('furnitureList'); list.innerHTML = '';
   for (const f of state.furniture) {
     const el = document.createElement('div'); el.className = 'fitem';
     el.innerHTML = `
+      ${f.photo ? `<img class="thumb" src="${f.photo}" alt="">` : ''}
       <button class="color" title="Colour" style="background:${f.color}"></button>
       <input class="name" value="${f.name.replace(/"/g, '&quot;')}" />
       <div class="btns"><button data-a="place" title="Place one on the plan">＋</button><button data-a="del" title="Remove">✕</button></div>

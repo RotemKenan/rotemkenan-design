@@ -17,6 +17,26 @@ export const PRESETS = [
   { kind: 'buffet', name: 'Buffet station', w: 300, d: 80, h: 90, seats: 0, color: '#f4efe6' },
 ];
 
+// Rotem's own inventory. Dimensions marked ~ are estimates — adjust in the furniture list.
+const I = (photo) => `assets/inventory/${photo}.jpg`;
+export const INVENTORY = [
+  { kind: 'lowTable', shape: 'round', legs: 'cabriole', name: 'Low round table, black cabriole', w: 90, d: 90, h: 45, seats: 0, color: '#1b1918', photo: I('low-round-black') },
+  { kind: 'lowTable', shape: 'round', legs: 'cabriole', cloth: '#ece5d8', name: 'Low round table + linen', w: 90, d: 90, h: 45, seats: 0, color: '#1b1918', photo: I('low-round-linen') },
+  { kind: 'lowTable', shape: 'square', legs: 'cabriole', name: 'Low square table, black cabriole', w: 80, d: 80, h: 45, seats: 0, color: '#1b1918', photo: I('low-square-black') },
+  { kind: 'lowTable', shape: 'square', legs: 'cabriole', cloth: '#ece5d8', name: 'Low square table + linen', w: 80, d: 80, h: 45, seats: 0, color: '#1b1918', photo: I('low-square-linen') },
+  { kind: 'bistro', shape: 'round', name: 'Bistro table, black', w: 70, d: 70, h: 75, seats: 2, color: '#1b1918', photo: I('bistro-black') },
+  { kind: 'bistro', shape: 'round', name: 'Bistro table, walnut top', w: 70, d: 70, h: 75, seats: 2, color: '#8a5f3c', photo: I('bistro-walnut') },
+  { kind: 'bistro', shape: 'round', cloth: '#ece5d8', candle: true, name: 'Bistro + linen & hurricane', w: 70, d: 70, h: 75, seats: 2, color: '#1b1918', photo: I('bistro-candle') },
+  { kind: 'club', name: 'Vintage leather armchair', w: 80, d: 85, h: 90, seats: 0, color: '#7a4526', photo: I('club-leather') },
+  { kind: 'channelSofa', name: 'Channel velvet sofa, chocolate', w: 200, d: 73, h: 80, seats: 0, color: '#3b2419', photo: I('channel-sofa') },
+  { kind: 'curvedSofa', name: 'Curved velvet sofa, green', w: 346, d: 120, h: 80, seats: 0, color: '#1f5a3c', photo: I('curved-green') },
+  { kind: 'curvedSofa', name: 'Curved velvet sofa, rust', w: 346, d: 120, h: 80, seats: 0, color: '#8a3f22', photo: I('curved-rust') },
+  { kind: 'slipper', name: 'Velvet slipper chair, rust', w: 60, d: 70, h: 80, seats: 0, color: '#7e3a1f', photo: I('slipper-rust') },
+  { kind: 'slipper', name: 'Velvet slipper chair, green', w: 60, d: 70, h: 80, seats: 0, color: '#5f7744', photo: I('slipper-green') },
+];
+
+export const isRound = (it) => it.shape === 'round' || ['roundTable', 'cocktail', 'plant'].includes(it.kind);
+
 let uid = Date.now() % 100000;
 export const newId = (p = 'id') => `${p}${(uid++).toString(36)}`;
 

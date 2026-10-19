@@ -89,9 +89,9 @@ export function suggestLayout() {
   each('buffet', (f, i) => scan(f, along(H * 0.4, H - 100, 25).map((y) => [i % 2 ? f.d / 2 + 40 : W - f.d / 2 - 40, y]), 90));
 
   // 5. Lounge corners near the entrance.
-  const lounge = [...byKind('sofa'), ...byKind('armchair')];
+  const lounge = ['sofa', 'armchair', 'curvedSofa', 'channelSofa', 'club', 'slipper', 'lowTable'].flatMap(byKind);
   lounge.forEach((f) => { for (let i = 0; i < f.qty; i++) scan(f, along(f.d / 2 + 80, H / 3, 25).flatMap((y) => along(f.w / 2 + 60, W / 3, 30).flatMap((x) => [[x, y], [W - x, y]])), 0, 15); });
-  each('cocktail', () => scan(byKind('cocktail')[0], along(220, H / 2, 40).flatMap((y) => along(W / 2 - 400, W / 2 + 400, 60).map((x) => [x, y])), 0, 60));
+  [...byKind('cocktail'), ...byKind('bistro')].forEach((f) => { for (let i = 0; i < f.qty; i++) scan(f, along(220, H / 2, 40).flatMap((y) => along(W / 2 - 400, W / 2 + 400, 60).map((x) => [x, y])), 0, 60); });
 
   // 6. Dining tables: fill the room on a grid from the dance floor outward.
   const dining = state.furniture.filter((f) => (f.kind === 'roundTable') || (f.kind === 'rectTable' && f.seats > 4));
