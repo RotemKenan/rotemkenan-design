@@ -312,12 +312,18 @@ function magnet(p, it, skip) {
     const rot = ((q.rot + turns * 90) % 360 + 360) % 360, odd = Math.abs(turns) % 2 === 1;
     const pw = odd ? it.d : it.w, pd = odd ? it.w : it.d, qa = (-q.rot * Math.PI) / 180;
     const lx = (p.x - q.x) * Math.cos(qa) - (p.y - q.y) * Math.sin(qa), ly = (p.x - q.x) * Math.sin(qa) + (p.y - q.y) * Math.cos(qa);
-    const sideX = (iq.w + pw) / 2, sideY = (iq.d + pd) / 2;
-    const alignY = [0, (iq.d - pd) / 2, -(iq.d - pd) / 2], alignX = [0, (iq.w - pw) / 2, -(iq.w - pw) / 2];
-    const near = (v, opts) => opts.reduce((b, o) => (Math.abs(v - o) < Math.abs(v - b) ? o : b), opts[0]);
-    const cands = [];
-    for (const sx of [sideX, -sideX]) { const ay = near(ly, alignY); cands.push({ lx: sx, ly: Math.abs(ly - ay) < MAGNET ? ay : ly }); }
-    for (const sy of [sideY, -sideY]) { const ax = near(lx, alignX); cands.push({ lx: Math.abs(lx - ax) < MAGNET ? ax : lx, ly: sy }); }
+    // Each axis on its own: snap any edge (or the centre) of p to any edge (or the centre) of q.
+    const snapAxis = (v, ph, qh) => {
+      let bestV = v, bd = MAGNET;
+      for (const target of [-qh, qh]) for (const edge of [-ph, ph]) { const nv = target - edge, d = Math.abs(v - nv); if (d < bd) { bd = d; bestV = nv; } }
+      if (Math.abs(v) < bd) bestV = 0;
+      return bestV;
+    };
+    let cx = snapAxis(lx, pw / 2, iq.w / 2), cy = snapAxis(ly, pd / 2, iq.d / 2);
+    // never overlap: if the pieces still cross, push out along the shallower side so they just touch
+    const ox = (iq.w + pw) / 2 - Math.abs(cx), oy = (iq.d + pd) / 2 - Math.abs(cy);
+    if (ox > 0.5 && oy > 0.5) { if (ox < oy) cx = Math.sign(cx || 1) * (iq.w + pw) / 2; else cy = Math.sign(cy || 1) * (iq.d + pd) / 2; }
+    const cands = [{ lx: cx, ly: cy }];
     for (const c of cands) {
       const dist = Math.hypot(c.lx - lx, c.ly - ly);
       if (dist > MAGNET || (best && dist >= best.dist)) continue;
@@ -478,7 +484,7 @@ window.addEventListener('keydown', (e) => {
   else if (mod && k === 'c') clipboard = sel.map((p) => ({ ...p }));
   else if (mod && k === 'v' && clipboard.length) { e.preventDefault(); pasteFrom(clipboard); }
   else if (e.key.startsWith('Arrow')) {
-    const s = e.shiftKey ? 50 : 10;
+    const s = e.altKey ? 1 : e.shiftKey ? 50 : 10;
     for (const p of sel) { if (p.locked) continue; if (e.key === 'ArrowLeft') p.x -= s; if (e.key === 'ArrowRight') p.x += s; if (e.key === 'ArrowUp') p.y += s; if (e.key === 'ArrowDown') p.y -= s; }
     e.preventDefault(); emit('placed');
   }
