@@ -207,3 +207,8 @@ export async function restoreAll(text) {
   }
   return n;
 }
+
+export async function renameProject(id, name) {
+  const p = (await listProjects()).find((x) => x.id === id); if (!p) return;
+  p.eventName = name; await tx('readwrite', (s) => s.put(p));
+}

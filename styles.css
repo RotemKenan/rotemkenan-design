@@ -290,7 +290,7 @@ h4 { margin: 6px 0 0; font-size: 12px; color: var(--muted); font-weight: 600; te
   .actions { order: 2; margin-inline-start: auto; }
   .event-switch { order: 3; width: 100%; }
   .event-switch select { flex: 1; max-width: none; }
-  .event-switch .event-pick { flex: 1; } .event-pick select { width: 100%; }
+  .event-switch .event-pick { flex: 1; } .event-btn { flex: 1; max-width: none; }
   .tabs { order: 4; width: 100%; overflow-x: auto; margin-inline-start: 0; }
   .tabs button { padding: 7px 10px; flex: 0 0 auto; }
   .actions { margin-inline-start: auto; }
@@ -337,7 +337,13 @@ body.viewer .tabs [data-view="mood"], body.viewer .tabs [data-view="inventory"],
 body.viewer #planView .toolbar > :not(#fitView), body.viewer #inspector, body.viewer #walkBeauty { display: none !important; }
 body.viewer .layout { grid-template-columns: 1fr !important; }
 
-/* event name in the top bar: a see-through layer over the name catches double clicks; the arrow still opens the list */
-.event-pick { position: relative; display: inline-flex; }
-#eventTitleHit { position: absolute; inset-block: 0; inset-inline-start: 0; inset-inline-end: 30px; cursor: pointer; }
-#eventTitleEdit { position: absolute; inset: 0; width: 100%; font: inherit; padding: 0 10px; border-radius: 8px; border: 1px solid var(--champagne, #c9a96e); background: #fff; color: #1b1918; }
+/* event switcher: button + list; double-click a name to rename it */
+.event-pick { position: relative; display: inline-flex; min-width: 0; }
+.event-btn { display: inline-flex; align-items: center; gap: 8px; max-width: 280px; background: var(--night-3); color: var(--cream); border: 1px solid var(--night-line); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+.event-btn #eventBtnLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.event-btn .caret { opacity: .7; font-size: 11px; }
+.event-list { position: absolute; top: calc(100% + 4px); inset-inline-start: 0; min-width: 100%; max-height: 60vh; overflow-y: auto; z-index: 60; background: var(--night-3); border: 1px solid var(--night-line); border-radius: 10px; padding: 4px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+.ev-item { padding: 8px 12px; border-radius: 6px; color: var(--cream); white-space: nowrap; cursor: pointer; user-select: none; }
+.ev-item:hover { background: rgba(255,255,255,.08); }
+.ev-item.active { background: rgba(201,169,110,.22); }
+.ev-edit { font: inherit; width: 100%; min-width: 200px; padding: 2px 6px; border-radius: 6px; border: 1px solid #c9a96e; background: #fff; color: #1b1918; }

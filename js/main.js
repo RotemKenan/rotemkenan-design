@@ -1,6 +1,6 @@
 import {
   state, PRESETS, INVENTORY, onChange, emit, addFurniture, serialize, load, itemOf,
-  VIEWER, backupAll, restoreAll, packShare, unpackShare, newProject, saveProject, listProjects, openProject, deleteProject, restoreLastProject, newId,
+  VIEWER, renameProject, backupAll, restoreAll, packShare, unpackShare, newProject, saveProject, listProjects, openProject, deleteProject, restoreLastProject, newId,
   commitHistory, undo, redo, canUndo, canRedo, saveInventory,
 } from './state.js';
 import { parseVenue, demoVenue, exportDxf, looksLikeDxf, VENUE_LIBRARY } from './dxf.js';
@@ -63,7 +63,10 @@ async function renderEventSelect() {
   const all = await listProjects().catch(() => []);
   const cur = all.find((p) => p.id === state.id);
   if (cur) Object.assign(cur, { eventName: state.eventName, brief: state.brief }); else all.unshift({ id: state.id, eventName: state.eventName, brief: state.brief });
-  $('eventSelect').innerHTML = all.map((p) => `<option value="${p.id}" ${p.id === state.id ? 'selected' : ''}>${esc(eventLabel(p.eventName))}${p.brief?.date ? ' · ' + p.brief.date : ''}</option>`).join('');
+  $('eventSelect').innerHTML = all.map((p) => `<option value="${p.id}" ${p.id === state.id ? 'selected' : ''}>${evLabel(p)}</option>`).join('');
+  if ($('eventBtnLabel').querySelector('input')) return; // mid-rename
+  $('eventBtnLabel').innerHTML = evLabel(cur || all[0] || {});
+  $('eventList').innerHTML = all.map((p) => `<div class="ev-item${p.id === state.id ? ' active' : ''}" data-id="${p.id}" title="${esc(t('dblRename'))}">${evLabel(p)}</div>`).join('');
 }
 $('eventSelect').onchange = async (e) => { await saveProject(); await openProject(e.target.value); afterOpen(); toast(t('opened')); };
 $('newEvent').onclick = async () => { await saveProject(); newProject(t('newEventName')); await saveProject(); afterOpen(); showView('mood'); $('eventName').select(); };
@@ -75,24 +78,46 @@ async function renameEvent(suggest) {
 async function setEventName(name) {
   state.eventName = name.trim(); $('eventName').value = state.eventName; emit('brief'); await saveProject(); await renderEventSelect();
 }
-// The event name in the top bar: one click opens the list, a double click turns it into a text box to rename.
-let titleClick;
-$('eventTitleHit').addEventListener('click', () => {
-  clearTimeout(titleClick);
-  titleClick = setTimeout(() => { const s = $('eventSelect'); try { s.showPicker(); } catch { s.focus(); } }, 260);
-});
-$('eventTitleHit').addEventListener('dblclick', () => {
-  clearTimeout(titleClick);
-  const inp = $('eventTitleEdit');
-  inp.value = state.eventName || ''; inp.classList.remove('hidden'); inp.focus(); inp.select();
-});
-{
-  const inp = $('eventTitleEdit');
-  let cancel = false;
-  const done = async () => { inp.classList.add('hidden'); if (!cancel && inp.value.trim() && inp.value.trim() !== state.eventName) { await setEventName(inp.value); toast(t('renamed')); } cancel = false; };
-  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') { cancel = true; inp.blur(); } e.stopPropagation(); });
+// The event switcher: a list of events — click one to open it, double-click any name (or the current one on the button) to rename it in place.
+let evClick;
+const evLabel = (p) => `${esc(eventLabel(p.eventName))}${p.brief?.date ? ' · ' + p.brief.date : ''}`;
+function editName(el, id, current) {
+  const inp = document.createElement('input');
+  inp.className = 'ev-edit'; inp.value = current || '';
+  el.replaceChildren(inp); inp.focus(); inp.select();
+  let cancel = false, finished = false;
+  const done = async () => {
+    if (finished) return; finished = true;
+    const v = inp.value.trim();
+    inp.remove(); // let the list and button redraw
+    if (!cancel && v && v !== current) {
+      if (id === state.id) await setEventName(v); else { await renameProject(id, v); await renderEventSelect(); }
+      toast(t('renamed'));
+    } else await renderEventSelect();
+  };
+  inp.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') { cancel = true; inp.blur(); } });
+  inp.addEventListener('click', (e) => e.stopPropagation());
+  inp.addEventListener('dblclick', (e) => e.stopPropagation());
   inp.addEventListener('blur', done);
 }
+$('eventBtn').addEventListener('click', () => { clearTimeout(evClick); evClick = setTimeout(() => $('eventList').classList.toggle('hidden'), 220); });
+$('eventBtn').addEventListener('dblclick', () => { clearTimeout(evClick); $('eventList').classList.add('hidden'); editName($('eventBtnLabel'), state.id, state.eventName); });
+$('eventList').addEventListener('click', (e) => {
+  const row = e.target.closest('[data-id]'); if (!row || row.querySelector('input')) return;
+  clearTimeout(evClick);
+  evClick = setTimeout(async () => {
+    $('eventList').classList.add('hidden');
+    if (row.dataset.id === state.id) return;
+    await saveProject(); await openProject(row.dataset.id); afterOpen(); toast(t('opened'));
+  }, 260);
+});
+$('eventList').addEventListener('dblclick', async (e) => {
+  const row = e.target.closest('[data-id]'); if (!row) return;
+  clearTimeout(evClick);
+  const p = (await listProjects()).find((x) => x.id === row.dataset.id);
+  editName(row, row.dataset.id, row.dataset.id === state.id ? state.eventName : p?.eventName);
+});
+document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.event-pick')) $('eventList').classList.add('hidden'); });
 $('renameEvent').onclick = async () => { closeMenu(); await renameEvent(); };
 $('dupEvent').onclick = async () => {
   closeMenu(); await saveProject();
