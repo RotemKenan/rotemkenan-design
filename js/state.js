@@ -182,6 +182,13 @@ export function addFurniture(preset, qty = 1) {
 // ---------- view-only share links: the plan packed into the URL ----------
 const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
 async function pipe(bytes, stream) { return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer()); }
+// Some phone browsers (older iPhones) cannot (de)compress natively — fall back to a small library then.
+const fflate = () => import('https://cdn.jsdelivr.net/npm/fflate@0.8.2/esm/browser.js');
+async function deflate(bytes) { try { return await pipe(bytes, new CompressionStream('deflate-raw')); } catch { return (await fflate()).deflateSync(bytes, { level: 9 }); } }
+async function inflate(bytes) {
+  try { return await pipe(bytes, new DecompressionStream('deflate-raw')); } catch { /* try the library */ }
+  try { return (await fflate()).inflateSync(bytes); } catch (e) { throw Object.assign(new Error('cut'), { cut: /EOF|end|invalid/i.test(e.message) }); }
+}
 // Compact form: only what the viewer draws, numbers rounded to whole cm, pieces as [item, x, y, rot].
 const SHARE_KEYS = ['kind', 'legs', 'armless', 'style', 'name', 'w', 'd', 'h', 'seats', 'seatCount', 'color', 'finish', 'shape', 'innerW', 'seatH', 'cloth', 'candle', 'trim', 'invId', 'photo', 'texture'];
 const isData = (v) => typeof v === 'string' && v.startsWith('data:');
@@ -195,15 +202,16 @@ export async function packShare() {
     p: state.placed.map((q) => [fid.indexOf(q.itemId), Math.round(q.x), Math.round(q.y), Math.round(q.rot)].concat(q.label ? [q.label] : [])),
     m: { palette: state.mood.palette, roles: state.mood.roles, light: state.mood.light },
   };
-  const z = await pipe(new TextEncoder().encode(JSON.stringify(data)), new CompressionStream('deflate-raw'));
+  const z = await deflate(new TextEncoder().encode(JSON.stringify(data)));
   let out = '';
   for (let i = 0; i < z.length; i += 8192) out += String.fromCharCode(...z.subarray(i, i + 8192));
   return `${location.origin}${location.pathname}#v2=${btoa(out).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
 }
 export async function unpackShare(hash = location.hash) {
   const v2 = hash.startsWith('#v2=');
-  const z = unb64u(hash.slice(v2 ? 4 : 3));
-  const d = JSON.parse(new TextDecoder().decode(await pipe(z, new DecompressionStream('deflate-raw'))));
+  let z;
+  try { z = unb64u(hash.slice(v2 ? 4 : 3).replace(/[^A-Za-z0-9_-]/g, '')); } catch { throw Object.assign(new Error('cut'), { cut: true }); }
+  const d = JSON.parse(new TextDecoder().decode(await inflate(z)));
   if (!v2) return d; // links made before the compact form
   const furniture = d.f.map((o, i) => ({ ...o, id: `f${i}` }));
   return {

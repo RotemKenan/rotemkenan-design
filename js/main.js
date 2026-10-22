@@ -579,7 +579,7 @@ initMood(toast);
 (async () => {
   if (VIEWER) {
     document.body.classList.add('viewer');
-    try { load(await unpackShare()); } catch { toast(t('shareBroken')); }
+    try { load(await unpackShare()); } catch (e) { $('planView').insertAdjacentHTML('beforeend', `<div class="share-error">${t(e.cut ? 'shareCut' : 'shareBroken')}</div>`); }
     showView('split');
     new ResizeObserver(() => { plan.resize(); plan.fit(); }).observe($('planCanvas'));
     setTimeout(() => { plan.resize(); plan.fit(); view3d.resize(); }, 600); return;
