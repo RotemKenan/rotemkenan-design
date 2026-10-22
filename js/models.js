@@ -101,6 +101,11 @@ export function buildItem(it, { chairs = true } = {}) {
       const m = texMat(it.finish || 'velvet', c, 2);
       g.add(mesh(new THREE.BoxGeometry(w, 0.42, d), m, 0, 0.21, 0));
       g.add(mesh(new THREE.BoxGeometry(w, h - 0.42, 0.18), m, 0, 0.42 + (h - 0.42) / 2, -d / 2 + 0.09));
+      if (it.armless) { // open-ended module on short black feet
+        for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) g.add(mesh(new THREE.CylinderGeometry(0.012, 0.008, 0.05), BLACK(), x * (w / 2 - 0.06), 0.025, z * (d / 2 - 0.06)));
+        g.children.slice(0, 2).forEach((o) => (o.position.y += 0.05));
+        break;
+      }
       g.add(mesh(new THREE.BoxGeometry(0.15, 0.25, d), m, -w / 2 + 0.075, 0.55, 0));
       g.add(mesh(new THREE.BoxGeometry(0.15, 0.25, d), m, w / 2 - 0.075, 0.55, 0));
       break;
