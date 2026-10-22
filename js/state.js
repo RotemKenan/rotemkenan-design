@@ -1,7 +1,7 @@
 // Central project state. All lengths are in centimetres.
 
 // A shared view-only link (#v=…) opens the plan read-only: nothing can be moved and nothing is saved.
-export const VIEWER = location.hash.startsWith('#v=');
+export const VIEWER = /^#v2?=/.test(location.hash);
 
 export const PRESETS = [
   { kind: 'roundTable', name: 'Round table Ø180', w: 180, d: 180, h: 76, seats: 12, color: '#f4efe6' },
@@ -171,19 +171,35 @@ export function addFurniture(preset, qty = 1) {
 // ---------- view-only share links: the plan packed into the URL ----------
 const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
 async function pipe(bytes, stream) { return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer()); }
+// Compact form: only what the viewer draws, numbers rounded to whole cm, pieces as [item, x, y, rot].
+const SHARE_KEYS = ['kind', 'name', 'w', 'd', 'h', 'seats', 'seatCount', 'color', 'finish', 'shape', 'innerW', 'seatH', 'cloth', 'candle', 'trim', 'invId', 'photo', 'texture'];
+const isData = (v) => typeof v === 'string' && v.startsWith('data:');
 export async function packShare() {
-  // uploaded pictures (venue screenshot, mood images, photo textures) are left out to keep the link short
-  const strip = (v) => (typeof v === 'string' && v.startsWith('data:') ? undefined : Array.isArray(v) ? v.map(strip) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, strip(x)])) : v);
-  const data = strip({ eventName: state.eventName, brief: state.brief, venue: state.venue && { ...state.venue, image: undefined }, mood: state.mood, furniture: state.furniture, placed: state.placed });
-  const raw = new TextEncoder().encode(JSON.stringify(data));
+  const segs = state.venue?.segments || [], layers = [...new Set(segs.map((q) => q.layer))];
+  const fid = state.furniture.map((f) => f.id);
+  const data = {
+    n: state.eventName, b: state.brief,
+    v: state.venue && { L: layers, s: segs.map((q) => [q.x1, q.y1, q.x2, q.y2].map(Math.round).concat(layers.indexOf(q.layer))), t: state.venue.texts, l: state.venue.layers, h: state.venue.wallHeight },
+    f: state.furniture.map((o) => Object.fromEntries(SHARE_KEYS.filter((k) => o[k] != null && o[k] !== '' && !isData(o[k])).map((k) => [k, o[k]]))),
+    p: state.placed.map((q) => [fid.indexOf(q.itemId), Math.round(q.x), Math.round(q.y), Math.round(q.rot)].concat(q.label ? [q.label] : [])),
+    m: { palette: state.mood.palette, roles: state.mood.roles, light: state.mood.light },
+  };
+  const z = await pipe(new TextEncoder().encode(JSON.stringify(data)), new CompressionStream('deflate-raw'));
   let out = '';
-  const z = await pipe(raw, new CompressionStream('deflate-raw'));
   for (let i = 0; i < z.length; i += 8192) out += String.fromCharCode(...z.subarray(i, i + 8192));
-  return `${location.origin}${location.pathname}#v=${btoa(out).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
+  return `${location.origin}${location.pathname}#v2=${btoa(out).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
 }
 export async function unpackShare(hash = location.hash) {
-  const z = unb64u(hash.slice(3));
-  return JSON.parse(new TextDecoder().decode(await pipe(z, new DecompressionStream('deflate-raw'))));
+  const v2 = hash.startsWith('#v2=');
+  const z = unb64u(hash.slice(v2 ? 4 : 3));
+  const d = JSON.parse(new TextDecoder().decode(await pipe(z, new DecompressionStream('deflate-raw'))));
+  if (!v2) return d; // links made before the compact form
+  const furniture = d.f.map((o, i) => ({ ...o, id: `f${i}` }));
+  return {
+    eventName: d.n, brief: d.b, furniture, mood: d.m,
+    venue: d.v && { segments: d.v.s.map(([x1, y1, x2, y2, li]) => ({ x1, y1, x2, y2, layer: d.v.L[li] })), texts: d.v.t, layers: d.v.l, wallHeight: d.v.h },
+    placed: d.p.map(([fi, x, y, rot, label], i) => ({ id: `p${i}`, itemId: `f${fi}`, x, y, rot, ...(label ? { label } : {}) })),
+  };
 }
 
 // ---------- full backup: every event + the inventory in one file ----------

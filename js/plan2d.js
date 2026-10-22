@@ -67,7 +67,7 @@ export function draw(clean = false) {
   }
 
   // furniture: floors first (dance floor, stage) so seating draws on top
-  const bad = clean ? new Set() : overlaps();
+  const bad = clean || VIEWER ? new Set() : overlaps(); // clients never see the overlap warnings
   const order = [...state.placed].sort((a, b) => (['danceFloor', 'stage'].includes(itemOf(b)?.kind) ? 1 : 0) - (['danceFloor', 'stage'].includes(itemOf(a)?.kind) ? 1 : 0));
   for (const p of order) {
     const it = itemOf(p); if (!it) continue;
