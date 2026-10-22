@@ -355,3 +355,9 @@ body.viewer .layout { grid-template-columns: 1fr !important; }
 .inv-cats button.active { background: var(--champagne, #c9a96e); color: #1b1918; border-color: transparent; }
 
 .share-error { position: absolute; inset: 30% 10% auto; padding: 18px 20px; border-radius: 12px; background: #fff; color: #5a1f2a; font-size: 17px; line-height: 1.5; text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,.15); z-index: 5; }
+/* client view: header on top, the plan and 3D fill the rest of the screen (phones included) */
+body.viewer { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+body.viewer .layout { flex: 1; min-height: 0; display: block !important; height: auto !important; }
+body.viewer .stage { height: 100%; }
+body.viewer #renderShot, body.viewer #renderAll, body.viewer #threeView .hint { display: none !important; }
+@media (max-width: 800px) { body.viewer #threeView .toolbar button, body.viewer #threeView .toolbar select { padding: 4px 8px; font-size: 13px; } }

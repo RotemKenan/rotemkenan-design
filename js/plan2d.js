@@ -24,9 +24,11 @@ export function fit() {
   if (!r.width) return;
   const b = state.venue ? venueBounds(state.venue) : { minX: 0, minY: 0, maxX: 2000, maxY: 1500 };
   const w = b.maxX - b.minX, h = b.maxY - b.minY;
-  view.scale = Math.min((r.width - 150) / w, (r.height - 170) / h); // room for the dimension lines
+  // room for the dimension lines, smaller margins on a phone so the scale never goes negative
+  const mx = Math.min(150, r.width * 0.2), my = Math.min(170, r.height * 0.25);
+  view.scale = Math.max(0.01, Math.min((r.width - mx) / w, (r.height - my) / h));
   view.ox = (r.width - w * view.scale) / 2 - b.minX * view.scale;
-  view.oy = (r.height - h * view.scale) / 2 - b.minY * view.scale + 30;
+  view.oy = (r.height - h * view.scale) / 2 - b.minY * view.scale + Math.min(30, my / 5);
   draw();
 }
 
