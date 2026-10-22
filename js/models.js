@@ -67,6 +67,16 @@ function hurricane(h) {
   return g;
 }
 
+// Round or square table on four curved legs (low coffee tables and the dining-height version)
+function cabrioleTable(g, it, c) {
+  const w = it.w * M, d = it.d * M, h = it.h * M;
+  const m = texMat(it.finish || 'lacquer', c, 1), round = it.shape === 'round';
+  g.add(mesh(round ? new THREE.CylinderGeometry(w / 2, w / 2, 0.05, 48) : new THREE.BoxGeometry(w, 0.05, d), m, 0, h - 0.025, 0));
+  const lx = round ? w * 0.3 : w / 2 - 0.06, lz = round ? d * 0.3 : d / 2 - 0.06;
+  for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) { const l = cabrioleLeg(h - 0.05, sx, sz, m); l.position.set(lx * sx, 0, lz * sz); g.add(l); }
+  if (it.cloth) { const cl = linenCloth(Math.max(w, d) * 1.05, Math.max(w, d), it.cloth, 0.14); cl.position.y = h + 0.005; g.add(cl); }
+}
+
 export function buildItem(it, { chairs = true } = {}) {
   const g = new THREE.Group();
   const w = it.w * M, d = it.d * M, h = it.h * M, c = it.color;
@@ -120,14 +130,11 @@ export function buildItem(it, { chairs = true } = {}) {
       g.add(foliage);
       break;
     case 'lowTable': {
-      const m = texMat(it.finish || 'lacquer', c, 1), round = it.shape === 'round';
-      g.add(mesh(round ? new THREE.CylinderGeometry(w / 2, w / 2, 0.05, 48) : new THREE.BoxGeometry(w, 0.05, d), m, 0, h - 0.025, 0));
-      const lx = round ? w * 0.3 : w / 2 - 0.06, lz = round ? d * 0.3 : d / 2 - 0.06;
-      for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) { const l = cabrioleLeg(h - 0.05, sx, sz, m); l.position.set(lx * sx, 0, lz * sz); g.add(l); }
-      if (it.cloth) { const cl = linenCloth(Math.max(w, d) * 1.05, Math.max(w, d), it.cloth, 0.14); cl.position.y = h + 0.005; g.add(cl); }
+      cabrioleTable(g, it, c);
       break;
     }
     case 'bistro': {
+      if (it.legs === 'cabriole') { cabrioleTable(g, it, c); break; } // a dining-height table on the same curved legs
       const m = texMat('iron', '#1a1816', 2);
       g.add(mesh(new THREE.CylinderGeometry(w / 2, w / 2 - 0.02, 0.04, 48), texMat(it.finish || 'lacquer', c, 1), 0, h - 0.02, 0));
       g.add(mesh(new THREE.CylinderGeometry(0.035, 0.035, h - 0.2), m, 0, (h - 0.2) / 2 + 0.16, 0));

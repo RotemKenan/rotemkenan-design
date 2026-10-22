@@ -33,6 +33,7 @@ const DEFAULT_INVENTORY = [
   { id: 'bistro-walnut', kind: 'bistro', shape: 'round', name: 'Bistro table, walnut top', w: 70, d: 70, h: 75, seatH: 0, color: '#b07a4f', finish: 'walnut', supplier: 'Harmonia', sku: '3201-24' },
   { id: 'bistro-oak', kind: 'bistro', shape: 'round', name: 'Café table, oak top, black iron base', w: 70, d: 70, h: 75, seatH: 0, color: '#c98a4a', finish: 'walnut', supplier: 'Harmonia', sku: '24-3206', notes: 'Ø70 from supplier; height is a typical dining height — please measure', known: ['w', 'd'] },
   { id: 'bistro-candle', kind: 'bistro', shape: 'round', cloth: '#ece5d8', candle: true, name: 'Bistro + linen & hurricane', w: 70, d: 70, h: 75, seatH: 0, color: '#1b1918', finish: 'lacquer' },
+  { id: 'round-table-black-90', kind: 'bistro', shape: 'round', legs: 'cabriole', name: 'Round dining table, black wood, curved legs', w: 90, d: 90, h: 75, seatH: 0, color: '#1b1918', finish: 'lacquer', supplier: 'Harmonia', sku: '4258-4187', stock: 1, notes: 'Ø90, height 75 (supplier)', known: ['w', 'd', 'h'] },
   { id: 'bar-table-black', kind: 'bistro', shape: 'round', name: 'Bar table, black round top, black iron base', w: 80, d: 80, h: 110, seatH: 0, color: '#1b1918', finish: 'lacquer', supplier: 'Harmonia', sku: '2046-3028', notes: 'Ø80 from supplier; height is a typical bar height — please measure', known: ['w', 'd'] },
   { id: 'bar-stool-wood', kind: 'stool', shape: 'round', name: 'Bar stool, wood seat, black hairpin legs', w: 40, d: 40, h: 75, seatH: 75, color: '#c49a6c', finish: 'walnut', supplier: 'Harmonia', sku: '2003', stock: 59, notes: 'Sizes are typical bar-stool sizes — please measure', known: [] },
   { id: 'venice-chair-black', kind: 'chair', name: 'Venice chair, black (medallion back, leather seat)', w: 48, d: 55, h: 98, seatH: 47, color: '#2a211e', finish: 'leather', supplier: 'Harmonia', sku: '5095', stock: 100, notes: 'Sizes are typical for this chair style — please measure', known: [] },
@@ -172,7 +173,7 @@ export function addFurniture(preset, qty = 1) {
 const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
 async function pipe(bytes, stream) { return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer()); }
 // Compact form: only what the viewer draws, numbers rounded to whole cm, pieces as [item, x, y, rot].
-const SHARE_KEYS = ['kind', 'name', 'w', 'd', 'h', 'seats', 'seatCount', 'color', 'finish', 'shape', 'innerW', 'seatH', 'cloth', 'candle', 'trim', 'invId', 'photo', 'texture'];
+const SHARE_KEYS = ['kind', 'legs', 'name', 'w', 'd', 'h', 'seats', 'seatCount', 'color', 'finish', 'shape', 'innerW', 'seatH', 'cloth', 'candle', 'trim', 'invId', 'photo', 'texture'];
 const isData = (v) => typeof v === 'string' && v.startsWith('data:');
 export async function packShare() {
   const segs = state.venue?.segments || [], layers = [...new Set(segs.map((q) => q.layer))];
