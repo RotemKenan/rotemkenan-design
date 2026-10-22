@@ -67,6 +67,28 @@ function hurricane(h) {
   return g;
 }
 
+// Carved black wooden armchair: upholstered seat, arched high back, padded arms, curved legs, brass studs
+function baroqueChair(g, it, c) {
+  const w = it.w * M, d = it.d * M, h = it.h * M, sh = (it.seatH || 44) * M;
+  const wood = texMat('lacquer', it.trim || '#141210', 1), fab = texMat(it.finish || 'velvet', c, 1.5);
+  const brass = mat('#b8924a', { metalness: 0.8, roughness: 0.35 });
+  const base = sh - 0.14;
+  for (const [sx, sz] of [[1, 1], [-1, 1], [1, -1], [-1, -1]]) { const l = cabrioleLeg(base, sx, sz, wood); l.position.set(sx * (w / 2 - 0.07), 0, sz * (d / 2 - 0.07)); g.add(l); }
+  g.add(mesh(new THREE.BoxGeometry(w - 0.04, 0.08, d - 0.04), wood, 0, base + 0.04, 0)); // carved apron
+  g.add(mesh(new THREE.BoxGeometry(w - 0.14, 0.1, d - 0.12), fab, 0, base + 0.13, 0.03)); // seat cushion
+  const backH = h - base - 0.08, bz = -d / 2 + 0.05;
+  g.add(mesh(new THREE.BoxGeometry(w - 0.12, backH, 0.08), wood, 0, base + 0.08 + backH / 2, bz));
+  g.add(mesh(new THREE.BoxGeometry(w - 0.2, backH - 0.1, 0.03), fab, 0, base + 0.08 + backH / 2, bz + 0.05));
+  const crest = mesh(new THREE.CylinderGeometry((w - 0.12) / 2, (w - 0.12) / 2, 0.08, 32, 1, false, -Math.PI / 2, Math.PI), wood, 0, h - 0.05, bz);
+  crest.rotation.x = -Math.PI / 2; crest.scale.set(1, 1, 0.35); g.add(crest);
+  for (const sx of [-1, 1]) {
+    g.add(mesh(new THREE.BoxGeometry(0.07, 0.22, d - 0.14), fab, sx * (w / 2 - 0.06), base + 0.27, 0.02));
+    g.add(mesh(new THREE.BoxGeometry(0.09, 0.05, d - 0.1), wood, sx * (w / 2 - 0.06), base + 0.4, 0.03));
+    g.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.06, 12), wood, sx * (w / 2 - 0.06), base + 0.4, d / 2 - 0.06));
+  }
+  for (let i = 0; i <= 14; i++) g.add(mesh(new THREE.SphereGeometry(0.006, 6, 4), brass, -w / 2 + 0.06 + ((w - 0.12) * i) / 14, base + 0.03, d / 2 - 0.015));
+}
+
 // Round or square table on four curved legs (low coffee tables and the dining-height version)
 function cabrioleTable(g, it, c) {
   const w = it.w * M, d = it.d * M, h = it.h * M;
@@ -98,6 +120,7 @@ export function buildItem(it, { chairs = true } = {}) {
       g.add(mesh(new THREE.CylinderGeometry(w / 2, w / 2, 0.02, 32), mat(c), 0, h, 0));
       break;
     case 'sofa': case 'armchair': {
+      if (it.style === 'baroque') { baroqueChair(g, it, c); break; }
       const m = texMat(it.finish || 'velvet', c, 2);
       g.add(mesh(new THREE.BoxGeometry(w, 0.42, d), m, 0, 0.21, 0));
       g.add(mesh(new THREE.BoxGeometry(w, h - 0.42, 0.18), m, 0, 0.42 + (h - 0.42) / 2, -d / 2 + 0.09));
