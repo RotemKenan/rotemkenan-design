@@ -434,10 +434,12 @@ canvas.addEventListener('pointerdown', (e) => {
   if (gi >= 0) { const [g] = ghosts.splice(gi, 1); canvas.dispatchEvent(new CustomEvent('ghost-accept', { detail: [g] })); draw(); return; }
   const p = hit(w.x, w.y);
   if (p) {
-    if (e.shiftKey || e.ctrlKey || e.metaKey) setSelection(state.selection.includes(p.id) ? state.selection.filter((i) => i !== p.id) : [...state.selection, p.id]);
+    // Shift/Ctrl on a piece that is already selected: keep the group for dragging; it is only un-selected on a plain click (no drag)
+    const toggleOff = (e.shiftKey || e.ctrlKey || e.metaKey) && state.selection.includes(p.id) ? p.id : null;
+    if ((e.shiftKey || e.ctrlKey || e.metaKey) && !toggleOff) setSelection([...state.selection, p.id]);
     else if (!state.selection.includes(p.id)) setSelection([p.id]);
     if (p.locked) { drag = null; return; }
-    drag = { mode: 'move', start: w, lead: p, items: selection().filter((q) => !q.locked).map((q) => ({ q, x: q.x, y: q.y, rot: q.rot })) };
+    drag = { mode: 'move', start: w, lead: p, toggleOff, items: selection().filter((q) => !q.locked).map((q) => ({ q, x: q.x, y: q.y, rot: q.rot })) };
   } else if (e.shiftKey) {
     marquee = { x0: w.x, y0: w.y, x1: w.x, y1: w.y }; drag = { mode: 'marquee' };
   } else {
@@ -465,14 +467,19 @@ canvas.addEventListener('pointermove', (e) => {
     emit('move'); return;
   }
   const dx = w.x - drag.start.x, dy = w.y - drag.start.y;
-  for (const o of drag.items) { o.q.x = snap(o.x + dx); o.q.y = snap(o.y + dy); o.q.rot = o.rot; }
+  // the whole selection moves by one shared step (snapped on the piece under the pointer), so the group keeps its exact shape
+  const L0 = drag.items.find((o) => o.q === drag.lead) || drag.items[0];
+  const mx = L0 ? snap(L0.x + dx) - L0.x : dx, my = L0 ? snap(L0.y + dy) - L0.y : dy;
+  if (Math.hypot(dx, dy) > 2) drag.moved = true;
+  for (const o of drag.items) { o.q.x = o.x + mx; o.q.y = o.y + my; o.q.rot = o.rot; }
   // Magnet: the piece under the pointer clicks onto a neighbour (same angle, edge to edge, aligned); the group follows.
   magnetLine = null;
   const lead = drag.items.find((o) => o.q === drag.lead);
   if (lead && document.getElementById('magnetToggle')?.checked) {
     const m = magnet(lead.q, itemOf(lead.q), new Set(drag.items.map((o) => o.q.id)));
     if (m) {
-      const ddx = m.x - lead.q.x, ddy = m.y - lead.q.y, dr = m.rot - lead.q.rot, a = (dr * Math.PI) / 180;
+      // a group only slides into place; turning it would change the arrangement
+      const ddx = m.x - lead.q.x, ddy = m.y - lead.q.y, dr = drag.items.length > 1 ? 0 : m.rot - lead.q.rot, a = (dr * Math.PI) / 180;
       for (const o of drag.items) {
         const rx = o.q.x - lead.q.x, ry = o.q.y - lead.q.y;
         o.q.x = lead.q.x + ddx + rx * Math.cos(a) - ry * Math.sin(a); o.q.y = lead.q.y + ddy + rx * Math.sin(a) + ry * Math.cos(a);
@@ -490,7 +497,8 @@ canvas.addEventListener('pointerup', () => {
     setSelection(state.placed.filter((p) => p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1).map((p) => p.id));
     marquee = null;
   }
-  if (drag?.mode === 'move' || drag?.mode === 'rotate') emit('placed');
+  if (drag?.mode === 'move' && drag.toggleOff && !drag.moved) setSelection(state.selection.filter((i) => i !== drag.toggleOff));
+  else if (drag?.mode === 'move' || drag?.mode === 'rotate') emit('placed');
   drag = null; live = null; magnetLine = null; canvas.style.cursor = 'grab'; draw();
 });
 canvas.addEventListener('wheel', (e) => {
