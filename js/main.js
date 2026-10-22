@@ -70,7 +70,28 @@ $('newEvent').onclick = async () => { await saveProject(); newProject(t('newEven
 async function renameEvent(suggest) {
   const name = prompt(t('renamePrompt'), suggest ?? state.eventName ?? '');
   if (name == null || !name.trim()) return false;
-  state.eventName = name.trim(); $('eventName').value = state.eventName; emit('brief'); await saveProject(); await renderEventSelect(); return true;
+  await setEventName(name); return true;
+}
+async function setEventName(name) {
+  state.eventName = name.trim(); $('eventName').value = state.eventName; emit('brief'); await saveProject(); await renderEventSelect();
+}
+// The event name in the top bar: one click opens the list, a double click turns it into a text box to rename.
+let titleClick;
+$('eventTitleHit').addEventListener('click', () => {
+  clearTimeout(titleClick);
+  titleClick = setTimeout(() => { const s = $('eventSelect'); try { s.showPicker(); } catch { s.focus(); } }, 260);
+});
+$('eventTitleHit').addEventListener('dblclick', () => {
+  clearTimeout(titleClick);
+  const inp = $('eventTitleEdit');
+  inp.value = state.eventName || ''; inp.classList.remove('hidden'); inp.focus(); inp.select();
+});
+{
+  const inp = $('eventTitleEdit');
+  let cancel = false;
+  const done = async () => { inp.classList.add('hidden'); if (!cancel && inp.value.trim() && inp.value.trim() !== state.eventName) { await setEventName(inp.value); toast(t('renamed')); } cancel = false; };
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') { cancel = true; inp.blur(); } e.stopPropagation(); });
+  inp.addEventListener('blur', done);
 }
 $('renameEvent').onclick = async () => { closeMenu(); await renameEvent(); };
 $('dupEvent').onclick = async () => {
