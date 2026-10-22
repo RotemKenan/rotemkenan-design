@@ -641,3 +641,12 @@ $('restoreAll').onchange = async (e) => {
   let last = 0; try { last = +localStorage.getItem('rk-last-backup') || 0; } catch { /* ignore */ }
   if (Date.now() - last > 7 * 864e5) setTimeout(() => toast(t('backupRemind')), 4000);
 })();
+
+// ---------- text notes on the plan ----------
+$('addNote').onclick = () => {
+  const text = prompt(t('notePrompt'), '');
+  if (!text || !text.trim()) return;
+  const f = addFurniture({ kind: 'note', name: t('noteName'), w: 160, d: 90, h: 0, seats: 0, color: 'rgba(255,255,255,0.9)' }, 0);
+  const p = plan.placeAtCenter(f); p.label = text.trim(); emit('placed');
+  toast(t('noteHint'));
+};

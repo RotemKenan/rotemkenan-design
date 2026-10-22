@@ -35,7 +35,7 @@ export function suggestSeats(maxSeats = Infinity) {
   const nearDoor = (g, it) => doorEnds.some((e) => Math.hypot(e.x - g.x, e.y - g.y) < RULES.door + Math.max(it.w, it.d) / 2);
   const obstacles = [];
   const addObs = (P, owner) => obstacles.push({ P, b: bbox(P), owner });
-  for (const p of state.placed) { const it = itemOf(p); if (it && it.kind !== 'danceFloor') for (const P of shapesOf(p, it)) addObs(P, p.id); }
+  for (const p of state.placed) { const it = itemOf(p); if (it && it.kind !== 'danceFloor' && it.kind !== 'note') for (const P of shapesOf(p, it)) addObs(P, p.id); }
   const free = (P, ignore, wallsOnly = false) => {
     const b = bbox(P);
     if (!wallsOnly)     for (const o of obstacles) if (o.owner !== ignore && boxHit(b, o.b) && sat(P, o.P)) return false;

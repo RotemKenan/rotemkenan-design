@@ -101,6 +101,7 @@ function cabrioleTable(g, it, c) {
 
 export function buildItem(it, { chairs = true } = {}) {
   const g = new THREE.Group();
+  if (it.kind === 'note') return g; // text notes live on the plan only
   const w = it.w * M, d = it.d * M, h = it.h * M, c = it.color;
   const accent = state.mood.roles?.florals || state.mood.palette[1] || '#c8a46a';
   switch (it.kind) {

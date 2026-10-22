@@ -91,7 +91,33 @@ function drawUnderlay(im) {
   ctx.globalAlpha = im.opacity ?? 0.7; ctx.drawImage(img, a.x, a.y, b.x - a.x, b.y - a.y); ctx.globalAlpha = 1;
 }
 
+// A text note on the plan: words in a soft box, sized in cm so they scale with the plan
+function drawNote(p, it, selected) {
+  const c = toScreen(p.x, p.y), text = p.label || '…';
+  const fs = it.d * 0.55 * view.scale;
+  ctx.save(); ctx.translate(c.x, c.y); ctx.rotate((-p.rot * Math.PI) / 180);
+  ctx.font = `600 ${fs}px Assistant, Inter, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const need = Math.round(ctx.measureText(text).width / view.scale + it.d * 0.6);
+  if (Math.abs(need - it.w) > 2) it.w = need; // the box follows the text
+  const w = it.w * view.scale, d = it.d * view.scale;
+  ctx.fillStyle = it.color || 'rgba(255,255,255,.88)'; ctx.strokeStyle = selected ? '#b07a3e' : '#5a1f2a'; ctx.lineWidth = selected ? 2.5 : 1.2;
+  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-w / 2, -d / 2, w, d, d * 0.2) : ctx.rect(-w / 2, -d / 2, w, d); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = it.ink || '#5a1f2a'; ctx.fillText(text, 0, fs * 0.06);
+  ctx.restore();
+}
+export function editNote(p) {
+  const v = prompt(document.documentElement.lang === 'he' ? 'הטקסט שיופיע על התוכנית:' : 'Text to show on the plan:', p.label || '');
+  if (v === null) return false;
+  p.label = v.trim(); emit('placed'); return true;
+}
+canvas.addEventListener('dblclick', (e) => {
+  if (VIEWER) return;
+  const { sx, sy } = rel(e), w = toWorld(sx, sy), p = hit(w.x, w.y);
+  if (p && itemOf(p)?.kind === 'note') editNote(p);
+});
+
 function drawItem(p, it, selected, clash) {
+  if (it.kind === 'note') return drawNote(p, it, selected);
   const c = toScreen(p.x, p.y);
   ctx.save();
   ctx.translate(c.x, c.y);
@@ -299,7 +325,7 @@ export function shapesOf(p, it) {
   return out;
 }
 export function overlaps() {
-  const bad = new Set(), list = state.placed.map((p) => ({ p, it: itemOf(p) })).filter((o) => o.it && o.it.kind !== 'danceFloor');
+  const bad = new Set(), list = state.placed.map((p) => ({ p, it: itemOf(p) })).filter((o) => o.it && o.it.kind !== 'danceFloor' && o.it.kind !== 'note');
   const shapes = list.map((o) => shapesOf(o.p, o.it));
   for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++)
     if (shapes[i].some((A) => shapes[j].some((B) => sat(A, B)))) { bad.add(list[i].p.id); bad.add(list[j].p.id); }
