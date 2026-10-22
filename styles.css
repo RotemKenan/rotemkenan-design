@@ -347,3 +347,9 @@ body.viewer .layout { grid-template-columns: 1fr !important; }
 .ev-item:hover { background: rgba(255,255,255,.08); }
 .ev-item.active { background: rgba(201,169,110,.22); }
 .ev-edit { font: inherit; width: 100%; min-width: 200px; padding: 2px 6px; border-radius: 6px; border: 1px solid #c9a96e; background: #fff; color: #1b1918; }
+
+/* inventory category chips */
+.inv-cats { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.inv-cats button { padding: 4px 10px; border-radius: 999px; font-size: 13px; background: var(--night-3); color: var(--cream); border: 1px solid var(--night-line); }
+.inv-cats button small { opacity: .6; margin-inline-start: 2px; }
+.inv-cats button.active { background: var(--champagne, #c9a96e); color: #1b1918; border-color: transparent; }

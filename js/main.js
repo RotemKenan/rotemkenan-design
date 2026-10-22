@@ -229,12 +229,26 @@ function renderLayers() {
 
 // ---------- inventory gallery: click to add, drag onto the plan ----------
 const invLabel = (p) => itemName({ ...p, invId: p.id });
+// category chips above the inventory: all / sofas / armchairs / chairs & stools / tables / poufs / other
+const INV_CATS = {
+  sofas: ['sofa', 'channelSofa', 'curvedSofa', 'bench'],
+  armchairs: ['armchair', 'club', 'slipper', 'loungeChair'],
+  chairs: ['chair', 'stool'],
+  tables: ['bistro', 'lowTable', 'roundTable', 'rectTable', 'cocktail', 'counter', 'bar'],
+  poufs: ['pouf', 'cushion'],
+};
+const catOf = (p) => Object.keys(INV_CATS).find((c) => INV_CATS[c].includes(p.kind) && !(c === 'sofas' && p.w < 120)) || (p.kind === 'channelSofa' ? 'armchairs' : 'other');
+let invCat = 'all';
 function renderGallery() {
   const q = $('invSearch').value.trim().toLowerCase();
-  $('inventory').innerHTML = INVENTORY.map((p, i) => ({ p, i })).filter(({ p }) => !q || p.name.toLowerCase().includes(q) || invLabel(p).toLowerCase().includes(q))
+  const counts = INVENTORY.reduce((o, p) => ((o[catOf(p)] = (o[catOf(p)] || 0) + 1), o), {});
+  $('invCats').innerHTML = ['all', ...Object.keys(INV_CATS), 'other'].filter((c) => c === 'all' || counts[c])
+    .map((c) => `<button data-cat="${c}" class="${c === invCat ? 'active' : ''}">${t('cat_' + c)} <small>${c === 'all' ? INVENTORY.length : counts[c]}</small></button>`).join('');
+  $('inventory').innerHTML = INVENTORY.map((p, i) => ({ p, i })).filter(({ p }) => invCat === 'all' || catOf(p) === invCat).filter(({ p }) => !q || p.name.toLowerCase().includes(q) || invLabel(p).toLowerCase().includes(q))
     .map(({ p, i }) => `<button class="inv" draggable="true" data-i="${i}" title="${esc(invLabel(p))} · ${p.w}×${p.d}×${p.h} cm"><img src="${p.photo}" alt="" draggable="false">${esc(invLabel(p))}</button>`).join('');
 }
 $('invSearch').addEventListener('input', renderGallery);
+$('invCats').addEventListener('click', (e) => { const b = e.target.closest('[data-cat]'); if (b) { invCat = b.dataset.cat; renderGallery(); } });
 document.addEventListener('inventory-changed', renderGallery);
 const furnitureFor = (inv) => state.furniture.find((f) => f.invId === inv.id) || addFurniture(inv, 0);
 function placeItem(f, x, y) {
