@@ -44,6 +44,7 @@ const DEFAULT_INVENTORY = [
   { id: 'slipper-rafael-brown', kind: 'slipper', name: 'Armchair "Rafael", dark brown velvet, armless', w: 63, d: 78, h: 83, seatH: 44, color: '#3a2a24', finish: 'velvet', supplier: 'Sugoy Design', sku: '', stock: 20, notes: 'Supplier sizes: width 63, depth 78, height 83, seat height 44.', known: ['w', 'd', 'h'] },
   { id: 'slipper-rafael-rose', kind: 'slipper', name: 'Armchair "Rafael", smoked burgundy suede, armless', w: 63, d: 78, h: 83, seatH: 44, color: '#8a2f2c', finish: 'velvet', supplier: 'Sugoy Design', sku: '', stock: 23, notes: 'Supplier sizes: width 63, depth 78, height 83, seat height 44. Suede (זמש), colour "בורדו מעושן".', known: ['w', 'd', 'h'] },
   { id: 'channel-chair-brown-leather', kind: 'channelSofa', name: 'Armchair "Tiffany", brown faux leather', w: 73, d: 70, h: 79, seatH: 45, color: '#6b4a36', finish: 'leather', supplier: 'Sugoy Design', sku: '', stock: 22, notes: 'Supplier sizes: width 73, depth 70, height 79, seat height 45. Faux leather (דמוי עור).', known: ['w', 'd', 'h'] },
+  { id: 'statue-venus', kind: 'statue', shape: 'round', name: 'Statue "Venus de Milo" on a fluted column', w: 40, d: 40, h: 160, podiumH: 75, seatH: 0, color: '#f2efe9', trim: '#bfae9c', finish: 'resin', supplier: 'Atelier', sku: '', stock: 1, notes: 'Statue 85 cm (resin) on a 75 cm fluted column — 160 cm in total. Column width estimated ~40 cm, please measure. Price ₪2,500.', known: ['h'] },
   { id: 'bar-table-black', kind: 'bistro', shape: 'round', name: 'Bar table, black round top, black iron base', w: 80, d: 80, h: 110, seatH: 0, color: '#1b1918', finish: 'lacquer', supplier: 'Harmonia', sku: '2046-3028', notes: 'Ø80 from supplier; height is a typical bar height — please measure', known: ['w', 'd'] },
   { id: 'bar-stool-wood', kind: 'stool', shape: 'round', name: 'Bar stool, wood seat, black hairpin legs', w: 40, d: 40, h: 75, seatH: 75, color: '#c49a6c', finish: 'walnut', supplier: 'Harmonia', sku: '2003', stock: 59, notes: 'Sizes are typical bar-stool sizes — please measure', known: [] },
   { id: 'venice-chair-black', kind: 'chair', name: 'Venice chair, black (medallion back, leather seat)', w: 48, d: 55, h: 98, seatH: 47, color: '#2a211e', finish: 'leather', supplier: 'Harmonia', sku: '5095', stock: 100, notes: 'Sizes are typical for this chair style — please measure', known: [] },
@@ -190,7 +191,7 @@ async function inflate(bytes) {
   try { return (await fflate()).inflateSync(bytes); } catch (e) { throw Object.assign(new Error('cut'), { cut: /EOF|end|invalid/i.test(e.message) }); }
 }
 // Compact form: only what the viewer draws, numbers rounded to whole cm, pieces as [item, x, y, rot].
-const SHARE_KEYS = ['kind', 'legs', 'armless', 'style', 'name', 'w', 'd', 'h', 'seats', 'seatCount', 'color', 'finish', 'shape', 'innerW', 'seatH', 'cloth', 'candle', 'trim', 'invId', 'photo', 'texture'];
+const SHARE_KEYS = ['kind', 'legs', 'armless', 'style', 'podiumH', 'name', 'w', 'd', 'h', 'seats', 'seatCount', 'color', 'finish', 'shape', 'innerW', 'seatH', 'cloth', 'candle', 'trim', 'invId', 'photo', 'texture'];
 const isData = (v) => typeof v === 'string' && v.startsWith('data:');
 export async function packShare() {
   const segs = state.venue?.segments || [], layers = [...new Set(segs.map((q) => q.layer))];
