@@ -1,7 +1,7 @@
 // Interactive 2D plan: venue lines + furniture, drag / rotate / duplicate / delete.
 import { state, emit, itemOf, newId, isRound, VIEWER } from './state.js';
 import { seatsOf } from './match.js';
-import { venueBounds, visibleSegments, footprint, itemOutline } from './dxf.js';
+import { venueBounds, visibleSegments, solidSegments, footprint, itemOutline } from './dxf.js';
 
 const canvas = document.getElementById('planCanvas');
 const ctx = canvas.getContext('2d');
@@ -336,7 +336,7 @@ export function overlaps() {
 function wallDistance(p, it) {
   let best = null;
   const poly = footprint(p, it);
-  for (const s of visibleSegments(state.venue)) {
+  for (const s of solidSegments(state.venue)) {
     const dx = s.x2 - s.x1, dy = s.y2 - s.y1, L2 = dx * dx + dy * dy; if (L2 < 100) continue;
     for (const q of poly) {
       const t = Math.max(0, Math.min(1, ((q.x - s.x1) * dx + (q.y - s.y1) * dy) / L2));

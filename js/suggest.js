@@ -2,7 +2,7 @@
 // Rules (cm): 90 walkway around new lounge pieces (120 for the main aisle is kept by the 90+90 of facing pieces),
 // 60 behind a chair at a table so it can be pulled out and passed behind, 15 from walls, 60 per person at tables.
 import { state, INVENTORY, itemOf, isRound } from './state.js';
-import { venueBounds, visibleSegments, footprint } from './dxf.js';
+import { venueBounds, solidSegments, footprint } from './dxf.js';
 import { shapesOf, sat } from './plan2d.js';
 import { seatsOf } from './match.js';
 
@@ -26,7 +26,7 @@ const bbox = (P) => ({ x0: Math.min(...P.map((q) => q.x)), x1: Math.max(...P.map
 const boxHit = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
 
 export function suggestSeats(maxSeats = Infinity) {
-  const segs = visibleSegments(state.venue).filter((s) => !/dim/i.test(s.layer));
+  const segs = solidSegments(state.venue);
   if (!segs.length) return [];
   // loose wall ends mark doors and openings: keep a clear zone in front of them
   const ends = new Map(), key = (x, y) => `${Math.round(x / 5)},${Math.round(y / 5)}`;

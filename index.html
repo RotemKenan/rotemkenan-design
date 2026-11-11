@@ -131,6 +131,7 @@
         <h3><span class="step">5</span> <span data-i18n="layoutTitle">Layout</span></h3>
         <button id="autoLayout" class="primary" data-i18n="suggest">✨ Suggest a layout</button>
         <button id="composeFromMood" data-i18n="composeFromMood">🪄 Base design from my selection</button>
+        <button id="adaptBtn" class="primary" data-i18n="adaptBtn">🔀 Adapt this design to another hall</button>
         <button id="clearLayout" class="ghost" data-i18n="clear">Clear placed items</button>
         <button id="exportDxf" data-i18n="downloadDxf">Download DXF plan</button>
       </section>
@@ -255,6 +256,14 @@
       </div>
     </section>
   </main>
+
+  <dialog id="adaptDialog" class="pick-dialog adapt-dialog">
+    <h2 data-i18n="adaptTitle">Adapt this design to another hall</h2>
+    <p class="hint" data-i18n="adaptHint">Your pieces are arranged in the new hall in five layout ideas. Pick the one closest to what you imagine — it opens as a new sketch, and this design stays as it is.</p>
+    <div class="row"><select id="adaptVenue"></select><button id="adaptGo" class="primary" data-i18n="adaptGo">Show layout ideas</button></div>
+    <div id="adaptOptions" class="adapt-options"></div>
+    <div class="row-actions"><button id="adaptClose" class="ghost" data-i18n="close">Close</button></div>
+  </dialog>
 
   <dialog id="pickDialog" class="pick-dialog">
     <h2 data-i18n="pickTitle">Furniture found in your mood board</h2>

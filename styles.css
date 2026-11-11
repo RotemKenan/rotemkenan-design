@@ -361,3 +361,13 @@ body.viewer .layout { flex: 1; min-height: 0; display: block !important; height:
 body.viewer .stage { height: 100%; }
 body.viewer #renderShot, body.viewer #renderAll, body.viewer #threeView .hint { display: none !important; }
 @media (max-width: 800px) { body.viewer #threeView .toolbar button, body.viewer #threeView .toolbar select { padding: 4px 8px; font-size: 13px; } }
+
+/* adapt to another hall: layout idea cards */
+.adapt-dialog { width: min(1100px, 96vw); }
+.adapt-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin: 12px 0; }
+.adapt-card { margin: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; display: flex; flex-direction: column; }
+.adapt-card img { width: 100%; display: block; background: #faf7f2; }
+.adapt-card figcaption { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 4px; }
+.adapt-card figcaption strong { font-family: var(--serif); font-size: 17px; }
+.adapt-card figcaption small { color: var(--muted, #857a70); }
+.adapt-card button { margin-top: 6px; align-self: flex-start; }

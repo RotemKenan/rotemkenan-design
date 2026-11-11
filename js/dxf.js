@@ -80,6 +80,8 @@ export function venueBounds(venue) {
   return { minX, minY, maxX, maxY };
 }
 
+// Lines that are physically there (walls, columns, doors…) — dimension lines and notes are only drawing marks.
+export const solidSegments = (venue) => visibleSegments(venue).filter((s) => !/dim|note|text|label/i.test(s.layer));
 export const visibleSegments = (venue) => (venue ? (venue.segments || []).filter((s) => venue.layers[s.layer] !== false) : []);
 
 export function demoVenue() {

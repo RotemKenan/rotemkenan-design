@@ -1,7 +1,7 @@
 // Suggests a layout: stage on the wall facing the entrance, dance floor in front of it,
 // bar / buffet along the side walls, lounges near the entrance and dining tables filling the rest.
 import { state, newId } from './state.js';
-import { venueBounds, visibleSegments } from './dxf.js';
+import { venueBounds, solidSegments as visibleSegments } from './dxf.js';
 
 const CHAIR_ZONE = 55;   // chairs + sitting space around a table
 const AISLE = 90;        // walking aisle between items
@@ -138,7 +138,11 @@ function makeFrame(side, b) {
 // curved sofas in facing pairs around a low table with poufs, straight sofas with armchairs across a table,
 // armchair pairs, bistro clusters, counters along the walls. Everything stays editable afterwards.
 // items: [{ f (event furniture entry), qty }]. Returns { placedCount, missing }.
-export function composeDesign(items) {
+// opts.style: 'islands' (centre-out, default) · 'perimeter' (lounges along the walls, open centre)
+// · 'centralBar' (counters as an island in the middle) · 'axis' (mirrored around a central aisle)
+// · 'zones' (lounge zone at the far end, bistro/bar zone by the entrance). opts.dry returns the pieces without placing them.
+export function composeDesign(items, opts = {}) {
+  const style = opts.style || 'islands';
   const venue = state.venue;
   if (!venue) throw new Error('Upload a venue plan first.');
   const segs = visibleSegments(venue), walls = segs.filter((s) => /wall/i.test(s.layer));
@@ -200,10 +204,15 @@ export function composeDesign(items) {
 
   // Packing: walls first for counters / bars / buffets, then clusters from the middle outward.
   const rects = [], placed = [];
+  let missing = 0;
   const fpr = (f, rot) => (rot % 180 === 0 ? { hw: f.w / 2, hd: f.d / 2 } : { hw: f.d / 2, hd: f.w / 2 });
+  // inside the room (walls only, ray casting) — keeps pieces out of the corners of an L-shaped or angled hall
+  const inside = (x, y) => { let n = 0; for (const q of use) if ((q.y1 > y) !== (q.y2 > y) && x < ((q.x2 - q.x1) * (y - q.y1)) / (q.y2 - q.y1) + q.x1) n++; return n % 2 === 1; };
+  const inRoom = (r) => [[r.x0, r.y0], [r.x1, r.y0], [r.x0, r.y1], [r.x1, r.y1], [(r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2]].every(([x, y]) => inside(x, y));
   const free = (r, gap) => r.x0 - gap >= b.minX && r.x1 + gap <= b.maxX && r.y0 - gap >= b.minY && r.y1 + gap <= b.maxY
+    && !rects.some((o) => r.x0 - gap < o.x1 && r.x1 + gap > o.x0 && r.y0 - gap < o.y1 && r.y1 + gap > o.y0)
     && !segs.some((s) => segHitsRect(s, { x0: r.x0 - 5, x1: r.x1 + 5, y0: r.y0 - 5, y1: r.y1 + 5 }))
-    && !rects.some((o) => r.x0 - gap < o.x1 && r.x1 + gap > o.x0 && r.y0 - gap < o.y1 && r.y1 + gap > o.y0);
+    && inRoom(r);
   const tryCluster = (m, cx, cy, turn, gap) => {
     const rot = (r) => (r + turn) % 360, a = (turn * Math.PI) / 180;
     const placedM = m.map((o) => ({ ...o, x: cx + o.dx * Math.cos(a) - o.dy * Math.sin(a), y: cy + o.dx * Math.sin(a) + o.dy * Math.cos(a), r: rot(o.rot) }));
@@ -215,23 +224,62 @@ export function composeDesign(items) {
     return true;
   };
   // wall pieces
-  let missing = 0;
+  const cxm = (b.minX + b.maxX) / 2, cym = (b.minY + b.maxY) / 2;
+  // entrance: the side nearest to the drawn doors (else the side with the biggest openings)
+  const doors = segs.filter((q) => /door/i.test(q.layer));
+  const entrance = doors.length ? (() => { const mx = doors.reduce((t, q) => t + (q.x1 + q.x2) / 2, 0) / doors.length, my = doors.reduce((t, q) => t + (q.y1 + q.y2) / 2, 0) / doors.length;
+    return [['bottom', my - b.minY], ['top', b.maxY - my], ['left', mx - b.minX], ['right', b.maxX - mx]].sort((p, q) => p[1] - q[1])[0][0]; })() : entranceSide(segs, b);
+  const fromEntrance = ([x, y]) => ({ bottom: y - b.minY, top: b.maxY - y, left: x - b.minX, right: b.maxX - x })[entrance];
+  // a reserved central aisle for the symmetric style (along the long side of the room)
+  if (style === 'axis') rects.push(W >= H ? { x0: b.minX, x1: b.maxX, y0: cym - 110, y1: cym + 110 } : { x0: cxm - 110, x1: cxm + 110, y0: b.minY, y1: b.maxY });
+  if (style === 'centralBar') { // counters joined end to end as one island in the middle
+    const bars = ['counter', 'bar'].flatMap((k) => pool[k] || []); if (pool.counter) pool.counter = []; if (pool.bar) pool.bar = [];
+    if (bars.length) {
+      const long = W >= H, total = bars.reduce((t, f) => t + f.w, 0);
+      let off = -total / 2;
+      const m = bars.map((f) => { const o = { f, dx: off + f.w / 2, dy: 0, rot: 0 }; off += f.w; return o; });
+      const near = []; for (let d = 0; d < 400; d += 30) near.push([cxm + (long ? 0 : d), cym + (long ? d : 0)], [cxm - (long ? 0 : d), cym - (long ? d : 0)]);
+      if (!near.some(([x, y]) => tryCluster(m, x, y, long ? 0 : 90, 90))) missing += bars.length;
+    }
+  }
   for (const k of ['counter', 'bar', 'buffet']) (pool[k] || []).forEach((f, i) => {
     const spots = [];
-    for (let x = b.minX + f.w / 2 + 80; x < b.maxX - f.w / 2 - 80; x += 40) spots.push([x, b.maxY - f.d / 2 - 30, 0], [x, b.minY + f.d / 2 + 30, 180]);
-    spots.sort((p, q) => Math.abs(p[0] - (b.minX + b.maxX) / 2) - Math.abs(q[0] - (b.minX + b.maxX) / 2));
+    // 45 cm off the wall: the 40 cm clearance check then still fits inside the room
+    for (let x = b.minX + f.w / 2 + 80; x < b.maxX - f.w / 2 - 80; x += 40) spots.push([x, b.maxY - f.d / 2 - 45, 0], [x, b.minY + f.d / 2 + 45, 180]);
+    for (let y = b.minY + f.w / 2 + 80; y < b.maxY - f.w / 2 - 80; y += 40) spots.push([b.minX + f.d / 2 + 45, y, 90], [b.maxX - f.d / 2 - 45, y, 270]);
+    // walls away from the entrance first, then the middle of each wall
+    const awayFromDoor = ([x, y]) => -fromEntrance([x, y]);
+    spots.sort((p, q) => awayFromDoor(p) - awayFromDoor(q) || Math.abs(p[0] - (b.minX + b.maxX) / 2) - Math.abs(q[0] - (b.minX + b.maxX) / 2));
     if (!spots.some(([x, y, r]) => tryCluster([{ f, dx: 0, dy: 0, rot: 0 }], x, y, r, 40))) missing++;
   });
   // islands: candidate centres on a grid, centre-out, alternating orientation for a livelier composition
   const cand = [];
   for (let y = b.minY + 100; y < b.maxY - 100; y += 30) for (let x = b.minX + 100; x < b.maxX - 100; x += 30) cand.push([x, y]);
   const cx0 = (b.minX + b.maxX) / 2, cy0 = (b.minY + b.maxY) / 2;
-  cand.sort((p, q) => Math.hypot((p[0] - cx0) / W, (p[1] - cy0) / H) - Math.hypot((q[0] - cx0) / W, (q[1] - cy0) / H));
+  const centreOut = (p, q) => Math.hypot((p[0] - cx0) / W, (p[1] - cy0) / H) - Math.hypot((q[0] - cx0) / W, (q[1] - cy0) / H);
+  const wallDist = ([x, y]) => Math.min(x - b.minX, b.maxX - x, y - b.minY, b.maxY - y);
+  // which wall is nearest → turn so the cluster's back (its +y side) faces that wall
+  const backTurn = ([x, y]) => [[b.maxY - y, 0], [y - b.minY, 180], [x - b.minX, 90], [b.maxX - x, 270]].sort((p, q) => p[0] - q[0])[0][1];
+  const isLounge = (m) => m.some((o) => ['curvedSofa', 'channelSofa', 'sofa', 'bench'].includes(o.f.kind));
+  const isBistro = (m) => m.some((o) => ['bistro', 'cocktail'].includes(o.f.kind));
   clusters.sort((p, q) => q.length - p.length);
+  const order = (m) => {
+    const c = [...cand];
+    const across = (p) => Math.abs(W >= H ? p[1] - cym : p[0] - cxm), alongC = (p) => Math.abs(W >= H ? p[0] - cxm : p[1] - cym);
+    if (style === 'perimeter' || style === 'centralBar') c.sort((p, q) => wallDist(p) - wallDist(q) || centreOut(p, q));
+    else if (style === 'axis') c.sort((p, q) => across(p) - across(q) || alongC(p) - alongC(q));
+    else if (style === 'zones') c.sort((p, q) => (isLounge(m) ? fromEntrance(q) - fromEntrance(p) : isBistro(m) ? fromEntrance(p) - fromEntrance(q) : centreOut(p, q)));
+    else c.sort(centreOut);
+    return c;
+  };
   clusters.forEach((m, i) => {
-    const turns = W >= H ? (i % 2 ? [90, 0] : [0, 90]) : [90, 0];
-    if (!turns.some((tn) => cand.some(([x, y]) => tryCluster(m, x, y, tn, 75)))) missing += m.length;
+    const c = order(m);
+    const turnsAt = (pt) => (style === 'perimeter' || style === 'centralBar' ? [backTurn(pt), (backTurn(pt) + 90) % 360]
+      : style === 'axis' ? (W >= H ? (pt[1] > cym ? [0, 90] : [180, 90]) : (pt[0] > cxm ? [270, 0] : [90, 0]))
+      : W >= H ? (i % 2 ? [90, 0] : [0, 90]) : [90, 0]);
+    if (!c.some((pt) => turnsAt(pt).some((tn) => tryCluster(m, pt[0], pt[1], tn, style === 'perimeter' ? 60 : 75)))) missing += m.length;
   });
+  if (opts.dry) return { placed, placedCount: placed.length, missing, left: left() };
   state.placed = [...state.placed.filter((p) => p.locked), ...placed];
   return { placedCount: placed.length, missing, left: left() };
 }

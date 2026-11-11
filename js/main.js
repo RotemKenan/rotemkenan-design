@@ -650,3 +650,65 @@ $('addNote').onclick = () => {
   const p = plan.placeAtCenter(f); p.label = text.trim(); emit('placed');
   toast(t('noteHint'));
 };
+
+// ---------- adapt this design to another hall: five layout ideas, each opens as a new sketch ----------
+const ADAPT_STYLES = ['islands', 'perimeter', 'centralBar', 'axis', 'zones'];
+let adaptRun = null;
+async function adaptVenueList() {
+  const others = (await listProjects()).filter((p) => p.id !== state.id && p.venue?.segments?.length);
+  const lib = VENUE_LIBRARY.map((v, i) => `<option value="lib:${i}">${esc(getLang() === 'he' ? v.he : v.en)}</option>`);
+  const ev = others.map((p) => `<option value="ev:${p.id}">${esc(t('adaptFromEvent', { name: eventLabel(p.eventName) }))}</option>`);
+  $('adaptVenue').innerHTML = [...lib, ...ev].join('');
+}
+async function adaptTarget(v) {
+  if (v.startsWith('lib:')) {
+    const L = VENUE_LIBRARY[+v.slice(4)];
+    const venue = parseVenue(await (await fetch(L.file)).text());
+    venue.wallHeight = state.venue?.wallHeight || 320;
+    return { venue, name: (getLang() === 'he' ? L.he : L.en).split(/\s[—(]/)[0] };
+  }
+  const p = (await listProjects()).find((x) => x.id === v.slice(3));
+  return { venue: structuredClone(p.venue), name: p.brief?.venueName || eventLabel(p.eventName) };
+}
+$('adaptBtn').onclick = async () => {
+  if (!state.placed.length) { toast(t('adaptEmpty')); return; }
+  await adaptVenueList(); $('adaptOptions').innerHTML = ''; $('adaptDialog').showModal();
+};
+$('adaptClose').onclick = () => $('adaptDialog').close();
+$('adaptGo').onclick = async () => {
+  const target = await adaptTarget($('adaptVenue').value).catch(() => null);
+  if (!target) { toast(t('adaptNoVenue')); return; }
+  // the pieces of this design, as many as are on the plan now (text notes stay behind)
+  const counts = new Map();
+  for (const p of state.placed) { const f = itemOf(p); if (f && f.kind !== 'note') counts.set(f, (counts.get(f) || 0) + 1); }
+  const items = [...counts].map(([f, qty]) => ({ f, qty })), total = [...counts.values()].reduce((a, b) => a + b, 0);
+  $('adaptOptions').innerHTML = `<p class="hint">${t('adaptWorking')}</p>`;
+  await new Promise((r) => setTimeout(r, 30));
+  const keep = { venue: state.venue, placed: state.placed };
+  const options = [];
+  try {
+    for (const style of ADAPT_STYLES) {
+      state.venue = target.venue; state.placed = [];
+      const r = composeDesign(items, { style, dry: true });
+      state.placed = r.placed;
+      const seats = r.placed.reduce((s, p) => s + seatsOf(itemOf(p)), 0);
+      options.push({ style, placed: r.placed, seats, count: r.placed.length, img: plan.snapshotPlan(900, 620) });
+      await new Promise((res) => setTimeout(res, 0));
+    }
+  } finally { state.venue = keep.venue; state.placed = keep.placed; plan.draw(); }
+  adaptRun = { target, options };
+  $('adaptOptions').innerHTML = options.map((o, i) => `<figure class="adapt-card">
+    <img src="${o.img}" alt="">
+    <figcaption><strong>${t('style_' + o.style)}</strong><span>${t('styleDesc_' + o.style)}</span>
+    <small>${t('adaptStats', { n: o.count, total, seats: o.seats })}</small>
+    <button class="primary" data-open="${i}">${t('adaptOpen')}</button></figcaption></figure>`).join('');
+};
+$('adaptOptions').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-open]'); if (!b || !adaptRun) return;
+  const o = adaptRun.options[+b.dataset.open], { target } = adaptRun;
+  await saveProject(); // the current design is saved and left untouched
+  const base = JSON.parse(serialize());
+  load({ ...base, id: newId('ev'), eventName: `${eventLabel(state.eventName)} · ${target.name} · ${t('style_' + o.style)}`, brief: { ...base.brief, venueName: target.name }, venue: structuredClone(target.venue), placed: o.placed.map((p) => ({ ...p })), measures: [], renders: [] });
+  await saveProject(); afterOpen(); $('adaptDialog').close(); showView('plan');
+  toast(t('adaptOpened'));
+});
