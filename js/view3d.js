@@ -149,7 +149,7 @@ export function rebuild() {
   const wallMat = texMat('linen', roles.walls || '#f2ece4', 3, { roughness: 0.95 });
   for (const s of visibleSegments(state.venue)) {
     const dx = (s.x2 - s.x1) * M, dz = -(s.y2 - s.y1) * M, len = Math.hypot(dx, dz);
-    if (len < 0.05) continue;
+    if (len < 0.05 || /dim/i.test(s.layer)) continue; // dimension lines belong to the 2D plan only
     const isCol = /col/i.test(s.layer), isWin = /win|glass/i.test(s.layer);
     // Doors, furniture, labels and the client's old layout are only marked on the floor; fixed units are low counters.
     const flat = /door|furn|table|station|chair|label|note|text|dim|client|hatch|detail/i.test(s.layer);

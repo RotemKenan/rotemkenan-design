@@ -9,6 +9,7 @@ const NAMED_UNITS = { mm: 0.1, cm: 1, m: 100 };
 // Venue plans that ship with the app (traced by hand), selectable without uploading a file.
 export const VENUE_LIBRARY = [
   { file: 'assets/venues/ambassadors-hall.dxf', en: 'Ambassadors hall — empty (18.84 × 9.15 m)', he: 'אולם אמבסדורס — ריק (18.84 × 9.15 מ׳)' },
+  { file: 'assets/venues/president-hall.dxf', en: 'President Hall (18.35 × 13.70 m)', he: 'אולם הנשיא — President Hall (18.35 × 13.70 מ׳)' },
 ];
 
 // A file is DXF only if it is text that starts with group code 0 / SECTION (or 999 comment).
@@ -19,7 +20,7 @@ export function parseVenue(text, unitsChoice = 'auto') {
   const insunits = dxf.header?.$INSUNITS;
   let scale = NAMED_UNITS[unitsChoice] ?? INSUNITS_TO_CM[insunits] ?? 0.1; // most venue plans are mm
 
-  const segs = [];
+  const segs = [], texts = [];
   const push = (a, b, layer) => segs.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y, layer });
   const arcPts = (c, r, a0, a1) => {
     if (a1 < a0) a1 += Math.PI * 2;
@@ -42,7 +43,12 @@ export function parseVenue(text, unitsChoice = 'auto') {
       case 'POLYLINE': chain(e.vertices, layer, e.shape || e.closed); break;
       case 'CIRCLE': chain(arcPts(e.center, e.radius, 0, Math.PI * 2), layer); break;
       case 'ARC': chain(arcPts(e.center, e.radius, e.startAngle, e.endAngle), layer); break;
-      default: break; // text, hatches, dimensions and inserts are skipped
+      case 'TEXT': case 'MTEXT': { // labels and dimension figures written on the drawing
+        const at = e.startPoint || e.position; if (!at || !e.text) break;
+        texts.push({ x: at.x, y: at.y, h: e.textHeight || e.height || 20, s: String(e.text).replace(/\\P/g, ' ').replace(/[{}]|\\[A-Za-z][^;]*;/g, ''), rot: e.rotation || 0, layer });
+        break;
+      }
+      default: break; // hatches, dimensions and inserts are skipped
     }
   }
   if (!segs.length) throw new Error('No lines found in this DXF.');
@@ -54,9 +60,11 @@ export function parseVenue(text, unitsChoice = 'auto') {
     s.x1 = (s.x1 - minX) * scale; s.x2 = (s.x2 - minX) * scale;
     s.y1 = (s.y1 - minY) * scale; s.y2 = (s.y2 - minY) * scale;
   });
+  texts.forEach((t) => { t.x = (t.x - minX) * scale; t.y = (t.y - minY) * scale; t.h *= scale; });
   const layers = {};
   segs.forEach((s) => (layers[s.layer] = true));
-  return { segments: segs, layers, wallHeight: 320 };
+  texts.forEach((t) => (layers[t.layer] = true));
+  return { segments: segs, texts, layers, wallHeight: 320 };
 }
 
 export function venueBounds(venue) {
