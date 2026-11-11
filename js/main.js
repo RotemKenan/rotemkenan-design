@@ -302,10 +302,11 @@ function renderFurniture() {
         <label>W<input type="number" data-k="w" value="${f.w}"></label>
         <label>D<input type="number" data-k="d" value="${f.d}"></label>
         <label>H<input type="number" data-k="h" value="${f.h}"></label>
-        <label>${t('seat')}<input type="number" data-k="seats" value="${f.seats}"></label>
+        <label>${t('seat')}<input type="number" data-seats-f value="${seatsOf(f)}" min="0"></label>
         <label>${t('qty')}<input type="number" data-k="qty" value="${f.qty}"></label>
       </div></details>`;
-    el.querySelectorAll('.dims input').forEach((inp) => (inp.onchange = () => { f[inp.dataset.k] = Math.max(0, +inp.value); emit('furniture'); }));
+    el.querySelectorAll('.dims input[data-k]').forEach((inp) => (inp.onchange = () => { f[inp.dataset.k] = Math.max(0, +inp.value); emit('furniture'); }));
+    el.querySelector('[data-seats-f]').onchange = (e) => setPieceSeats(f, e.target.value);
     el.querySelectorAll('.color').forEach((b) => (b.onclick = () => {
       const c = getActiveColor();
       if (c) { f.color = c; emit('furniture'); return; }
@@ -360,16 +361,7 @@ function renderInspector() {
       emit('furniture'); toast(t('sizeUpdated'));
     }));
     // Seats: tables built here get that many chairs drawn; any other piece just counts that many people (saved as its default)
-    box.querySelector('[data-seats]').onchange = (e) => {
-      const v = Math.max(0, Math.round(+e.target.value || 0));
-      if (!it.invId && ['roundTable', 'rectTable'].includes(it.kind)) it.seats = v;
-      else {
-        for (const f of state.furniture) if (f === it || (it.invId && f.invId === it.invId)) f.seatCount = v;
-        const inv = INVENTORY.find((x) => x.id === it.invId);
-        if (inv) { inv.seatCount = v; saveInventory(); }
-      }
-      emit('furniture'); toast(t('seatsUpdated', { n: v }));
-    };
+    box.querySelector('[data-seats]').onchange = (e) => setPieceSeats(it, e.target.value);
     box.querySelector('[data-lock]').onchange = (e) => { p.locked = e.target.checked; emit('placed'); };
   }
   box.querySelector('[data-a=rl]').onclick = () => plan.rotateSelection(-15);
@@ -725,3 +717,21 @@ $('venueLook').addEventListener('change', (e) => {
   if (LOOKS[k] && (state.venue.wallHeight || 320) === 320) state.venue.wallHeight = LOOKS[k].wallHeight;
   emit('venue'); if (k) toast(t('lookOn'));
 });
+
+// Seats per piece — one place for both seat fields (side panel and furniture list).
+// Tables built in the app get that many chairs drawn; any other piece just counts that many people.
+// The number applies to every copy of that piece in the event (and becomes the inventory default).
+function setPieceSeats(it, value) {
+  const v = Math.max(0, Math.round(+value || 0));
+  const before = state.placed.reduce((s, p) => s + seatsOf(itemOf(p)), 0);
+  if (!it.invId && ['roundTable', 'rectTable'].includes(it.kind)) { it.seats = v; delete it.seatCount; }
+  else {
+    for (const f of state.furniture) if (f === it || (it.invId && f.invId === it.invId)) f.seatCount = v;
+    const inv = INVENTORY.find((x) => x.id === it.invId);
+    if (inv) { inv.seatCount = v; saveInventory(); }
+  }
+  emit('furniture');
+  const copies = state.placed.filter((p) => { const f = itemOf(p); return f === it || (it.invId && f?.invId === it.invId); }).length;
+  const after = state.placed.reduce((s, p) => s + seatsOf(itemOf(p)), 0);
+  toast(t('seatsUpdatedAll', { n: v, copies, diff: (after - before >= 0 ? '+' : '') + (after - before), total: after }));
+}
