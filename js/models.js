@@ -108,12 +108,12 @@ export function buildItem(it, { chairs = true } = {}) {
     case 'roundTable': {
       g.add(mesh(new THREE.CylinderGeometry(w / 2 + 0.02, w / 2 + 0.15, h, 48, 1, true), mat(c, { side: THREE.DoubleSide, roughness: 0.9 }), 0, h / 2, 0));
       g.add(mesh(new THREE.CylinderGeometry(w / 2 + 0.02, w / 2 + 0.02, 0.01, 48), mat(c, { roughness: 0.9 }), 0, h, 0));
-      g.add(centerpiece(accent, h));
+      if (!it.invId) g.add(centerpiece(accent, h)); // tables from the inventory come bare — no automatic flowers
       break;
     }
     case 'rectTable': case 'buffet': {
       g.add(mesh(new THREE.BoxGeometry(w, h, d), mat(c, { roughness: 0.9 }), 0, h / 2, 0));
-      if (it.kind === 'rectTable') for (let x = -w / 2 + 0.6; x < w / 2 - 0.3; x += 1.2) { const cp = centerpiece(accent, h); cp.position.x = x; g.add(cp); }
+      if (it.kind === 'rectTable' && !it.invId) for (let x = -w / 2 + 0.6; x < w / 2 - 0.3; x += 1.2) { const cp = centerpiece(accent, h); cp.position.x = x; g.add(cp); }
       break;
     }
     case 'cocktail':
