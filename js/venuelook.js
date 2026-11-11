@@ -11,6 +11,16 @@ export const LOOKS = {
   kingDavid: { en: 'King David Hotel — President Hall', he: 'מלון המלך דוד — אולם הנשיאים', wallHeight: 500, walls: '#ecdcb3' },
 };
 
+// Events made before looks existed: recognise the hall by the name written on its plan and switch its look on once.
+// A look the user turned off is stored as '' and is left alone.
+export function autoLook(venue) {
+  if (!venue || venue.look !== undefined) return;
+  if ((venue.texts || []).some((t) => /President Hall/i.test(t.s))) {
+    venue.look = 'kingDavid';
+    if ((venue.wallHeight || 320) === 320) venue.wallHeight = LOOKS.kingDavid.wallHeight;
+  }
+}
+
 const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.8, ...extra });
 function canvasTex(w, h, draw, rx = 1, ry = 1) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;

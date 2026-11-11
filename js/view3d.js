@@ -12,7 +12,7 @@ import { VIEWER, state, itemOf, emit } from './state.js';
 import { venueBounds, visibleSegments } from './dxf.js';
 import { buildItem, M } from './models.js';
 import { texMat } from './textures.js';
-import { buildLook } from './venuelook.js';
+import { buildLook, autoLook } from './venuelook.js';
 
 const host = document.getElementById('threeHost');
 let renderer, scene, camera, controls, root, lights, framed = false;
@@ -134,6 +134,7 @@ export function rebuild() {
   const cx = (b.minX + b.maxX) / 2 * M, cz = -(b.minY + b.maxY) / 2 * M;
   const roles = state.mood.roles || {};
 
+  autoLook(state.venue);
   const wallH0 = (state.venue?.wallHeight || 320) * M;
   const look = buildLook(state.venue, { wallH: wallH0, cx, cz, W, D }); // the real hall's finishes, when the venue has a look
   // floor

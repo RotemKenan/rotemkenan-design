@@ -7,7 +7,7 @@ import { parseVenue, demoVenue, exportDxf, looksLikeDxf, VENUE_LIBRARY } from '.
 import { blobToDataUrl } from './pptx.js';
 import { traceImage, strokesToSegments, dimensionsFor, readDimensions, toMetres } from './trace.js';
 import { suggestLayout, composeDesign } from './layout.js';
-import { LOOKS } from './venuelook.js';
+import { LOOKS, autoLook } from './venuelook.js';
 import { findInventory, seatsOf } from './match.js';
 import * as plan from './plan2d.js';
 import * as view3d from './view3d.js';
@@ -220,6 +220,7 @@ function renderLayers() {
   $('scaleBtn').classList.toggle('hidden', !state.venue?.image);
   const box = $('layerList'); box.innerHTML = '';
   if (!state.venue) return;
+  autoLook(state.venue);
   $('wallHeight').value = state.venue.wallHeight || 320;
   $('venueLook').innerHTML = `<option value="">${t('lookPlain')}</option>` + Object.entries(LOOKS).map(([k, l]) => `<option value="${k}" ${state.venue.look === k ? 'selected' : ''}>${esc(getLang() === 'he' ? l.he : l.en)}</option>`).join('');
   for (const name of Object.keys(state.venue.layers)) {
@@ -720,7 +721,7 @@ $('adaptOptions').addEventListener('click', async (e) => {
 // hall look: the real finishes of a known hall in 3D (raises the walls to that hall's height the first time)
 $('venueLook').addEventListener('change', (e) => {
   if (!state.venue) return;
-  const k = e.target.value; state.venue.look = k || undefined;
+  const k = e.target.value; state.venue.look = k; // '' = plain, chosen on purpose
   if (LOOKS[k] && (state.venue.wallHeight || 320) === 320) state.venue.wallHeight = LOOKS[k].wallHeight;
   emit('venue'); if (k) toast(t('lookOn'));
 });
