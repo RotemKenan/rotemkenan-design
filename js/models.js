@@ -155,11 +155,20 @@ export function buildItem(it, { chairs = true } = {}) {
     case 'statue': { // white figure on a fluted stone column
       const pH = (it.podiumH || 75) * M, r = w / 2;
       const stone = mat(it.trim || '#bfae9c', { roughness: 0.95 });
-      const col = new THREE.CylinderGeometry(r * 0.92, r, pH, 24, 1);
-      const pos = col.attributes.position; // flutes: push every other edge in a little
-      for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), z = pos.getZ(i), a = Math.atan2(z, x), k = 1 - 0.04 * (0.5 + 0.5 * Math.cos(a * 12)); pos.setX(i, x * k); pos.setZ(i, z * k); }
-      col.computeVertexNormals();
-      g.add(mesh(col, stone, 0, pH / 2, 0));
+      if (it.podium === 'square') { // carved square pedestal: wide base, panelled shaft, moulded cap
+        const panel = it.podiumTex ? photoMat(it.podiumTex, 1, 1, { roughness: 0.9, sheen: 0 }) : stone;
+        g.add(mesh(new THREE.BoxGeometry(w, pH * 0.14, d), stone, 0, pH * 0.07, 0));
+        g.add(mesh(new THREE.BoxGeometry(w * 0.86, pH * 0.06, d * 0.86), stone, 0, pH * 0.17, 0));
+        g.add(mesh(new THREE.BoxGeometry(w * 0.74, pH * 0.62, d * 0.74), [panel, panel, stone, stone, panel, panel], 0, pH * 0.51, 0));
+        g.add(mesh(new THREE.BoxGeometry(w * 0.86, pH * 0.08, d * 0.86), stone, 0, pH * 0.86, 0));
+        g.add(mesh(new THREE.BoxGeometry(w * 0.98, pH * 0.1, d * 0.98), stone, 0, pH * 0.95, 0));
+      } else {
+        const col = new THREE.CylinderGeometry(r * 0.92, r, pH, 24, 1);
+        const pos = col.attributes.position; // flutes: push every other edge in a little
+        for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), z = pos.getZ(i), a = Math.atan2(z, x), k = 1 - 0.04 * (0.5 + 0.5 * Math.cos(a * 12)); pos.setX(i, x * k); pos.setZ(i, z * k); }
+        col.computeVertexNormals();
+        g.add(mesh(col, stone, 0, pH / 2, 0));
+      }
       const marble = mat(c || '#f2efe9', { roughness: 0.45 }), sH = h - pH, s = sH / 0.85;
       g.add(mesh(new THREE.BoxGeometry(r * 1.1, 0.04 * s, r * 0.9), marble, 0, pH + 0.02 * s, 0)); // plinth
       const prof = [[0, 0], [0.11, 0], [0.12, 0.08], [0.13, 0.3], [0.12, 0.42], [0.095, 0.48], [0.085, 0.56], [0.1, 0.64], [0.11, 0.68], [0.06, 0.72], [0.035, 0.75], [0, 0.76]]
