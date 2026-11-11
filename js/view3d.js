@@ -12,6 +12,7 @@ import { VIEWER, state, itemOf, emit } from './state.js';
 import { venueBounds, visibleSegments } from './dxf.js';
 import { buildItem, M } from './models.js';
 import { texMat } from './textures.js';
+import { buildLook } from './venuelook.js';
 
 const host = document.getElementById('threeHost');
 let renderer, scene, camera, controls, root, lights, framed = false;
@@ -133,8 +134,10 @@ export function rebuild() {
   const cx = (b.minX + b.maxX) / 2 * M, cz = -(b.minY + b.maxY) / 2 * M;
   const roles = state.mood.roles || {};
 
+  const wallH0 = (state.venue?.wallHeight || 320) * M;
+  const look = buildLook(state.venue, { wallH: wallH0, cx, cz, W, D }); // the real hall's finishes, when the venue has a look
   // floor
-  const floorMat = roles.floor ? texMat('walnut', roles.floor, Math.max(W, D) / 1.5, { roughness: 0.5 }) : mat('#cdbfae', { roughness: 0.55 });
+  const floorMat = look ? look.floorMat : roles.floor ? texMat('walnut', roles.floor, Math.max(W, D) / 1.5, { roughness: 0.5 }) : mat('#cdbfae', { roughness: 0.55 });
   const floor = mesh(new THREE.PlaneGeometry(W + 4, D + 4), floorMat, cx, 0, cz);
   floor.rotation.x = -Math.PI / 2; root.add(floor);
   if (state.venue?.image && state.venue.layers?.PHOTO !== false) {
@@ -146,11 +149,12 @@ export function rebuild() {
 
   // walls from venue segments
   const wallH = (state.venue?.wallHeight || 320) * M;
-  const wallMat = texMat('linen', roles.walls || '#f2ece4', 3, { roughness: 0.95 });
+  const wallMat = look ? look.wallMat : texMat('linen', roles.walls || '#f2ece4', 3, { roughness: 0.95 });
   for (const s of visibleSegments(state.venue)) {
     const dx = (s.x2 - s.x1) * M, dz = -(s.y2 - s.y1) * M, len = Math.hypot(dx, dz);
     if (len < 0.05 || /dim/i.test(s.layer)) continue; // dimension lines belong to the 2D plan only
     const isCol = /col/i.test(s.layer), isWin = /win|glass/i.test(s.layer);
+    if (isCol && look) continue; // the look builds real columns
     // Doors, furniture, labels and the client's old layout are only marked on the floor; fixed units are low counters.
     const flat = /door|furn|table|station|chair|label|note|text|dim|client|hatch|detail/i.test(s.layer);
     const fixed = !flat && /fix|counter|cabinet|bar/i.test(s.layer);
@@ -160,6 +164,8 @@ export function rebuild() {
     wmesh.rotation.y = Math.atan2(-dz, dx);
     root.add(wmesh);
   }
+
+  if (look) root.add(look.group);
 
   groups.clear();
   for (const p of state.placed) {
@@ -174,7 +180,12 @@ export function rebuild() {
 
   setLighting(document.getElementById('lightMood').value, { cx, cz, W, D, wallH });
   highlight();
-  root.userData = { cx, cz, W, D, wallH };
+  // the room itself (walls only — dimension lines and notes around the drawing are left out), for the walking start point
+  const ws = visibleSegments(state.venue).filter((q) => /wall/i.test(q.layer)), wb = ws.length ? ws.reduce((o, q) => ({ x0: Math.min(o.x0, q.x1, q.x2), x1: Math.max(o.x1, q.x1, q.x2), y0: Math.min(o.y0, q.y1, q.y2), y1: Math.max(o.y1, q.y1, q.y2) }), { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity }) : null;
+  const inner = look?.room || (wb && { cx: ((wb.x0 + wb.x1) / 2) * M, cz: -((wb.y0 + wb.y1) / 2) * M, W: (wb.x1 - wb.x0) * M, D: (wb.y1 - wb.y0) * M });
+  root.userData = { cx, cz, W, D, wallH, ceiling: look?.ceiling, inner };
+  // the ceiling, beams and chandeliers only show while the camera is inside the room
+  scene.onBeforeRender = (r, sc, cam) => { const c = root?.userData.ceiling; if (c) c.visible = cam.position.y < root.userData.wallH - 0.05; };
   if (!framed) { setCamera('perspective'); framed = true; }
 }
 
@@ -270,10 +281,10 @@ const EYE = 1.65;
 export const isWalking = () => !!walk;
 function startWalk() {
   if (!root) rebuild();
-  const { cx, cz, W, D } = root.userData;
+  const { cx, cz, W, D } = root.userData.inner || root.userData;
   const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
-  const inside = Math.abs(camera.position.x - cx) < W / 2 - 0.3 && Math.abs(camera.position.z - cz) < D / 2 - 0.3;
-  if (!inside) { camera.position.set(cx, EYE, cz + D / 2 - 1.2); dir.set(0, 0, -1); } // start near the front wall, facing in
+  const inside = camera.position.y < root.userData.wallH && Math.abs(camera.position.x - cx) < W / 2 - 0.3 && Math.abs(camera.position.z - cz) < D / 2 - 0.3;
+  if (!inside) { camera.position.set(cx, EYE, cz + D / 2 - 1.5); dir.set(0, 0, -1); } // start near the front wall, facing in
   walk = { yaw: Math.atan2(-dir.x, -dir.z), pitch: 0, keys: new Set() };
   camera.position.y = EYE; controls.enabled = false;
   state.selection = []; state.selectedId = null; highlight();

@@ -7,6 +7,7 @@ import { parseVenue, demoVenue, exportDxf, looksLikeDxf, VENUE_LIBRARY } from '.
 import { blobToDataUrl } from './pptx.js';
 import { traceImage, strokesToSegments, dimensionsFor, readDimensions, toMetres } from './trace.js';
 import { suggestLayout, composeDesign } from './layout.js';
+import { LOOKS } from './venuelook.js';
 import { findInventory, seatsOf } from './match.js';
 import * as plan from './plan2d.js';
 import * as view3d from './view3d.js';
@@ -166,9 +167,10 @@ function renderStats() {
 }
 
 // ---------- venue ----------
-function setVenueFromDxf(text, name) {
+function setVenueFromDxf(text, name, look) {
   state.venue = parseVenue(text, $('venueUnits').value);
   state.venue.wallHeight = +$('wallHeight').value || 320;
+  if (LOOKS[look]) Object.assign(state.venue, { look, wallHeight: LOOKS[look].wallHeight });
   toast(t('dxfLoaded', { name, n: state.venue.segments.length }));
   emit('venue'); plan.fit();
 }
@@ -199,7 +201,7 @@ function renderVenueLibrary() {
 }
 $('venueLibrary').addEventListener('change', async (e) => {
   const v = VENUE_LIBRARY[e.target.value]; e.target.value = ''; if (!v) return;
-  try { setVenueFromDxf(await (await fetch(v.file)).text(), getLang() === 'he' ? v.he : v.en); } catch (err) { toast(t('dxfError', { msg: err.message })); }
+  try { setVenueFromDxf(await (await fetch(v.file)).text(), getLang() === 'he' ? v.he : v.en, v.look); } catch (err) { toast(t('dxfError', { msg: err.message })); }
 });
 $('demoVenue').addEventListener('click', () => {
   if (state.venue && !confirm(t('confirmDemo'))) return;
@@ -219,6 +221,7 @@ function renderLayers() {
   const box = $('layerList'); box.innerHTML = '';
   if (!state.venue) return;
   $('wallHeight').value = state.venue.wallHeight || 320;
+  $('venueLook').innerHTML = `<option value="">${t('lookPlain')}</option>` + Object.entries(LOOKS).map(([k, l]) => `<option value="${k}" ${state.venue.look === k ? 'selected' : ''}>${esc(getLang() === 'he' ? l.he : l.en)}</option>`).join('');
   for (const name of Object.keys(state.venue.layers)) {
     const l = document.createElement('label');
     l.innerHTML = `<span><input type="checkbox" ${state.venue.layers[name] ? 'checked' : ''}/> ${esc(name)}</span>`;
@@ -665,6 +668,7 @@ async function adaptTarget(v) {
     const L = VENUE_LIBRARY[+v.slice(4)];
     const venue = parseVenue(await (await fetch(L.file)).text());
     venue.wallHeight = state.venue?.wallHeight || 320;
+    if (LOOKS[L.look]) Object.assign(venue, { look: L.look, wallHeight: LOOKS[L.look].wallHeight });
     return { venue, name: (getLang() === 'he' ? L.he : L.en).split(/\s[—(]/)[0] };
   }
   const p = (await listProjects()).find((x) => x.id === v.slice(3));
@@ -711,4 +715,12 @@ $('adaptOptions').addEventListener('click', async (e) => {
   load({ ...base, id: newId('ev'), eventName: `${eventLabel(state.eventName)} · ${target.name} · ${t('style_' + o.style)}`, brief: { ...base.brief, venueName: target.name }, venue: structuredClone(target.venue), placed: o.placed.map((p) => ({ ...p })), measures: [], renders: [] });
   await saveProject(); afterOpen(); $('adaptDialog').close(); showView('plan');
   toast(t('adaptOpened'));
+});
+
+// hall look: the real finishes of a known hall in 3D (raises the walls to that hall's height the first time)
+$('venueLook').addEventListener('change', (e) => {
+  if (!state.venue) return;
+  const k = e.target.value; state.venue.look = k || undefined;
+  if (LOOKS[k] && (state.venue.wallHeight || 320) === 320) state.venue.wallHeight = LOOKS[k].wallHeight;
+  emit('venue'); if (k) toast(t('lookOn'));
 });

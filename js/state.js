@@ -199,7 +199,7 @@ export async function packShare() {
   const fid = state.furniture.map((f) => f.id);
   const data = {
     n: state.eventName, b: state.brief,
-    v: state.venue && { L: layers, s: segs.map((q) => [q.x1, q.y1, q.x2, q.y2].map(Math.round).concat(layers.indexOf(q.layer))), t: state.venue.texts, l: state.venue.layers, h: state.venue.wallHeight },
+    v: state.venue && { L: layers, s: segs.map((q) => [q.x1, q.y1, q.x2, q.y2].map(Math.round).concat(layers.indexOf(q.layer))), t: state.venue.texts, l: state.venue.layers, h: state.venue.wallHeight, k: state.venue.look },
     f: state.furniture.map((o) => Object.fromEntries(SHARE_KEYS.filter((k) => o[k] != null && o[k] !== '' && !isData(o[k])).map((k) => [k, o[k]]))),
     p: state.placed.map((q) => [fid.indexOf(q.itemId), Math.round(q.x), Math.round(q.y), Math.round(q.rot)].concat(q.label ? [q.label] : [])),
     m: { palette: state.mood.palette, roles: state.mood.roles, light: state.mood.light },
@@ -218,7 +218,7 @@ export async function unpackShare(hash = location.hash) {
   const furniture = d.f.map((o, i) => ({ ...o, id: `f${i}` }));
   return {
     eventName: d.n, brief: d.b, furniture, mood: d.m,
-    venue: d.v && { segments: d.v.s.map(([x1, y1, x2, y2, li]) => ({ x1, y1, x2, y2, layer: d.v.L[li] })), texts: d.v.t, layers: d.v.l, wallHeight: d.v.h },
+    venue: d.v && { segments: d.v.s.map(([x1, y1, x2, y2, li]) => ({ x1, y1, x2, y2, layer: d.v.L[li] })), texts: d.v.t, layers: d.v.l, wallHeight: d.v.h, look: d.v.k },
     placed: d.p.map(([fi, x, y, rot, label], i) => ({ id: `p${i}`, itemId: `f${fi}`, x, y, rot, ...(label ? { label } : {}) })),
   };
 }
