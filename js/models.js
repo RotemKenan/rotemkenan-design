@@ -175,6 +175,12 @@ export function buildItem(it, { chairs = true } = {}) {
       g.add(foliage);
       break;
     case 'lowTable': {
+      if (it.legs === 'pyramid') { // square top on a tapered wooden pedestal, wider at the floor
+        const wood = texMat(it.finish || 'walnut', c, 1);
+        g.add(mesh(new THREE.BoxGeometry(w, 0.025, d), wood, 0, h - 0.0125, 0));
+        const base = mesh(new THREE.CylinderGeometry(w * 0.2, w * 0.38, h - 0.025, 4, 1), wood, 0, (h - 0.025) / 2, 0); base.rotation.y = Math.PI / 4; g.add(base);
+        break;
+      }
       cabrioleTable(g, it, c);
       break;
     }
