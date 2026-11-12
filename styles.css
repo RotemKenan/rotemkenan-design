@@ -371,3 +371,13 @@ body.viewer #renderShot, body.viewer #renderAll, body.viewer #threeView .hint { 
 .adapt-card figcaption strong { font-family: var(--serif); font-size: 17px; }
 .adapt-card figcaption small { color: var(--muted, #857a70); }
 .adapt-card button { margin-top: 6px; align-self: flex-start; }
+
+/* item count */
+.count-dialog { width: min(820px, 96vw); }
+.count-dialog h3 { font-family: var(--serif); margin: 16px 0 6px; }
+.count-dialog h3 small { color: var(--muted, #857a70); font-weight: normal; }
+.count-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.count-table th { text-align: start; font-weight: 600; color: var(--muted, #857a70); border-bottom: 1px solid var(--line); padding: 4px 6px; }
+.count-table td { border-bottom: 1px solid var(--line); padding: 6px; vertical-align: middle; }
+.count-table img { width: 48px; height: 40px; object-fit: contain; background: #fff; border-radius: 6px; }
+.count-table tr.over td { color: #b23a2a; }

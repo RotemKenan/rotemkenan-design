@@ -735,3 +735,44 @@ function setPieceSeats(it, value) {
   const after = state.placed.reduce((s, p) => s + seatsOf(itemOf(p)), 0);
   toast(t('seatsUpdatedAll', { n: v, copies, diff: (after - before >= 0 ? '+' : '') + (after - before), total: after }));
 }
+
+// ---------- item count: everything on the plan, grouped by supplier ----------
+function countRows() {
+  const by = new Map();
+  for (const p of state.placed) {
+    const f = itemOf(p); if (!f || f.kind === 'note') continue;
+    const key = f.invId || f.id, r = by.get(key) || { f, n: 0, seats: 0 };
+    r.n++; r.seats += seatsOf(f); by.set(key, r);
+  }
+  const rows = [...by.values()].map((r) => {
+    const inv = INVENTORY.find((x) => x.id === r.f.invId);
+    return { ...r, name: itemName(r.f), supplier: inv?.supplier || r.f.supplier || '', sku: inv?.sku || r.f.sku || '', stock: inv?.stock ?? null, size: `${r.f.w}×${r.f.d}×${r.f.h}`, photo: r.f.photo };
+  });
+  rows.sort((a, b) => (a.supplier || 'ת').localeCompare(b.supplier || 'ת') || b.n - a.n);
+  return rows;
+}
+function openCount() {
+  const rows = countRows(), total = rows.reduce((s, r) => s + r.n, 0), seats = rows.reduce((s, r) => s + r.seats, 0);
+  const groups = [...new Set(rows.map((r) => r.supplier))];
+  $('countBody').innerHTML = !rows.length ? `<p class="hint">${t('countEmpty')}</p>` : `<p class="hint">${t('countSummary', { n: total, kinds: rows.length, seats })}</p>` + groups.map((g) => `
+    <h3>${esc(g || t('countNoSupplier'))} <small>· ${rows.filter((r) => r.supplier === g).reduce((s, r) => s + r.n, 0)}</small></h3>
+    <table class="count-table"><thead><tr><th></th><th>${t('countItem')}</th><th>${t('countQty')}</th><th>${t('countStock')}</th><th>${t('countSku')}</th><th>${t('countSeats')}</th></tr></thead><tbody>
+    ${rows.filter((r) => r.supplier === g).map((r) => `<tr class="${r.stock && r.n > r.stock ? 'over' : ''}">
+      <td>${r.photo ? `<img src="${r.photo}" alt="">` : ''}</td><td>${esc(r.name)}<div class="hint">${r.size} cm</div></td>
+      <td><b>${r.n}</b></td><td>${r.stock ?? '—'}${r.stock && r.n > r.stock ? ` ⚠ ${t('countOver', { n: r.n - r.stock })}` : ''}</td><td>${esc(r.sku || '—')}</td><td>${r.seats || '—'}</td></tr>`).join('')}
+    </tbody></table>`).join('');
+  $('countDialog').showModal();
+}
+$('countBtn').onclick = openCount; $('countBtn2').onclick = openCount;
+$('countClose').onclick = () => $('countDialog').close();
+$('countCopy').onclick = async () => {
+  const rows = countRows(), groups = [...new Set(rows.map((r) => r.supplier))];
+  const txt = [`${eventLabel(state.eventName)}${state.brief?.date ? ' · ' + state.brief.date : ''}`, ...groups.flatMap((g) => ['', `*${g || t('countNoSupplier')}*`, ...rows.filter((r) => r.supplier === g).map((r) => `${r.n} × ${r.name}${r.sku ? ` (${t('countSku')} ${r.sku})` : ''}`)]), '', t('countSummary', { n: rows.reduce((s, r) => s + r.n, 0), kinds: rows.length, seats: rows.reduce((s, r) => s + r.seats, 0) })].join('\n');
+  try { await navigator.clipboard.writeText(txt); toast(t('countCopied')); } catch { prompt(t('countCopy'), txt); }
+};
+$('countCsv').onclick = () => {
+  const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const lines = [[t('countSupplier'), t('countItem'), t('countSku'), t('countQty'), t('countStock'), t('countSize'), t('countSeats')].map(q).join(','),
+    ...countRows().map((r) => [r.supplier, r.name, r.sku, r.n, r.stock ?? '', r.size, r.seats].map(q).join(','))];
+  download(`${fileBase()} - items.csv`, '\ufeff' + lines.join('\r\n'), 'text/csv'); // BOM so Excel reads Hebrew
+};
