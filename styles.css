@@ -381,3 +381,10 @@ body.viewer #renderShot, body.viewer #renderAll, body.viewer #threeView .hint { 
 .count-table td { border-bottom: 1px solid var(--line); padding: 6px; vertical-align: middle; }
 .count-table img { width: 48px; height: 40px; object-fit: contain; background: #fff; border-radius: 6px; }
 .count-table tr.over td { color: #b23a2a; }
+
+.count-top { background: var(--night-3); color: var(--cream); border: 1px solid var(--night-line); border-radius: 8px; padding: 6px 12px; white-space: nowrap; }
+body.viewer .count-top { display: none !important; }
+
+/* the hall-look choice gets its own full-width row under units / wall height */
+.row:has(> label.wide) { flex-wrap: wrap; } label.wide { grid-column: 1 / -1; flex: 1 1 100%; }
+label.wide select { width: 100%; }

@@ -519,7 +519,7 @@ $('presentSuppliers').onchange = () => buildPresentation();
 // ---------- language ----------
 $('langToggle').onclick = () => { applyLang(getLang() === 'he' ? 'en' : 'he'); $('saveState').textContent = '✓ ' + t('saved'); refreshAll(); };
 function refreshAll() {
-  renderVenueLibrary(); renderMeasureUi(); renderPresets(); renderGallery(); renderFurniture(); renderMood(); renderStats(); renderInspector(); renderEventSelect(); plan.draw();
+  renderLayers(); renderVenueLibrary(); renderMeasureUi(); renderPresets(); renderGallery(); renderFurniture(); renderMood(); renderStats(); renderInspector(); renderEventSelect(); plan.draw();
   if (currentView === 'inventory') renderInventory();
   if (currentView === 'present') buildPresentation();
 }
@@ -763,7 +763,7 @@ function openCount() {
     </tbody></table>`).join('');
   $('countDialog').showModal();
 }
-$('countBtn').onclick = openCount; $('countBtn2').onclick = openCount;
+$('countBtn').onclick = openCount; $('countBtn2').onclick = openCount; $('countTop').onclick = openCount;
 $('countClose').onclick = () => $('countDialog').close();
 $('countCopy').onclick = async () => {
   const rows = countRows(), groups = [...new Set(rows.map((r) => r.supplier))];
