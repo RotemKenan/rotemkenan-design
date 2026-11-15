@@ -90,12 +90,24 @@ function initPicking() {
 }
 
 // Move existing models to match the plan (cheap — used while dragging). Returns false if a full rebuild is needed.
+// Table-top pieces (lamps) stand on the table they are placed over; everything else on the floor.
+const TABLETOP = ['lamp'], TABLES = ['rectTable', 'roundTable', 'bistro', 'cocktail', 'lowTable', 'counter', 'bar', 'buffet'];
+function standOn(p) {
+  if (!TABLETOP.includes(itemOf(p)?.kind)) return 0;
+  for (const q of state.placed) {
+    const t = itemOf(q); if (!t || !TABLES.includes(t.kind)) continue;
+    const a = (-q.rot * Math.PI) / 180, dx = p.x - q.x, dy = p.y - q.y;
+    const u = dx * Math.cos(a) - dy * Math.sin(a), v = dx * Math.sin(a) + dy * Math.cos(a);
+    if (Math.abs(u) <= t.w / 2 && Math.abs(v) <= t.d / 2) return t.h * M;
+  }
+  return 0;
+}
 export function sync() {
   if (!root) return false;
   if (groups.size !== state.placed.length) { rebuild(); return true; }
   for (const p of state.placed) {
     const g = groups.get(p.id); if (!g) { rebuild(); return true; }
-    g.position.set(p.x * M, 0, -p.y * M); g.rotation.y = (p.rot * Math.PI) / 180;
+    g.position.set(p.x * M, standOn(p), -p.y * M); g.rotation.y = (p.rot * Math.PI) / 180;
   }
   highlight();
   return true;
@@ -173,7 +185,7 @@ export function rebuild() {
     const it = itemOf(p); if (!it) continue;
     const g = buildItem(it);
     g.userData.pid = p.id;
-    g.position.set(p.x * M, 0, -p.y * M);
+    g.position.set(p.x * M, standOn(p), -p.y * M);
     g.rotation.y = (p.rot * Math.PI) / 180;
     groups.set(p.id, g);
     root.add(g);

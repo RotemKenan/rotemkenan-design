@@ -327,7 +327,7 @@ export function shapesOf(p, it) {
   return out;
 }
 export function overlaps() {
-  const bad = new Set(), list = state.placed.map((p) => ({ p, it: itemOf(p) })).filter((o) => o.it && o.it.kind !== 'danceFloor' && o.it.kind !== 'note');
+  const bad = new Set(), list = state.placed.map((p) => ({ p, it: itemOf(p) })).filter((o) => o.it && o.it.kind !== 'danceFloor' && o.it.kind !== 'note' && o.it.kind !== 'lamp'); // lamps stand on tables
   const shapes = list.map((o) => shapesOf(o.p, o.it));
   for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++)
     if (shapes[i].some((A) => shapes[j].some((B) => sat(A, B)))) { bad.add(list[i].p.id); bad.add(list[j].p.id); }

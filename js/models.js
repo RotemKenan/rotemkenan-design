@@ -152,6 +152,18 @@ export function buildItem(it, { chairs = true } = {}) {
       for (const x of [-w / 2, w / 2]) g.add(mesh(new THREE.SphereGeometry(0.35, 16, 12), mat(accent, { roughness: 1 }), x, h, d / 2));
       break;
     }
+    case 'lamp': { // tall table lamp: round black foot, turned black metal stem, cream square shade with black edges
+      const metal = mat('#1b1916', { metalness: 0.6, roughness: 0.4 }), shadeH = h * 0.3, sw = w;
+      g.add(mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.04, 32), metal, 0, 0.02, 0));
+      const prof = [[0, 0], [0.05, 0], [0.04, 0.05], [0.025, 0.12], [0.045, 0.22], [0.02, 0.3], [0.018, 0.55], [0.035, 0.62], [0.016, 0.68], [0.014, 1], [0, 1]]
+        .map(([x, y]) => new THREE.Vector2(x, y * (h - shadeH * 0.6)));
+      g.add(mesh(new THREE.LatheGeometry(prof, 20), metal, 0, 0.04, 0));
+      const shadeGeo = new THREE.CylinderGeometry(sw * 0.33, sw * 0.71, shadeH, 4, 1, true); shadeGeo.rotateY(Math.PI / 4);
+      const shade = mesh(shadeGeo, mat(c || '#f1e6c8', { side: THREE.DoubleSide, emissive: '#ffe7b8', emissiveIntensity: 0.55, roughness: 0.9 }), 0, h - shadeH / 2, 0);
+      shade.castShadow = false; g.add(shade);
+      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(shadeGeo), new THREE.LineBasicMaterial({ color: '#111' })); edges.position.y = h - shadeH / 2; g.add(edges);
+      break;
+    }
     case 'statue': { // white figure on a fluted stone column
       const pH = (it.podiumH || 75) * M, r = w / 2;
       const stone = mat(it.trim || '#bfae9c', { roughness: 0.95 });
