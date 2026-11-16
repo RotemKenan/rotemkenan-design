@@ -1,5 +1,5 @@
 import {
-  state, PRESETS, INVENTORY, onChange, emit, addFurniture, serialize, load, itemOf,
+  reloadInventory,  state, PRESETS, INVENTORY, onChange, emit, addFurniture, serialize, load, itemOf,
   VIEWER, renameProject, backupAll, restoreAll, packShare, unpackShare, newProject, saveProject, listProjects, openProject, deleteProject, restoreLastProject, newId,
   commitHistory, undo, redo, canUndo, canRedo, saveInventory,
 } from './state.js';
@@ -546,7 +546,7 @@ onChange((reason) => {
     if (reason === 'undo' ? undo() : redo()) emit('restored');
     return;
   }
-  if (reason === 'load') { saveInventory(); /* event copies pick up corrected inventory sizes */ renderBrief(); renderLayers(); renderMood(); $('lightMood').value = state.mood.light || 'evening'; }
+  if (reason === 'load') { saveInventory({ stamp: false }); /* event copies pick up corrected inventory sizes */ renderBrief(); renderLayers(); renderMood(); $('lightMood').value = state.mood.light || 'evening'; }
   if (reason === 'venue') renderLayers();
   if (['measure', 'measureMode', 'load'].includes(reason)) renderMeasureUi();
   if (reason === 'mood') renderMood();
@@ -796,7 +796,7 @@ async function cloudSyncNow() {
     const r = await cloud.syncAll();
     renderEventSelect(); if ($('cloudDialog').open) $('cloudDialog').close();
     toast(t('cloudDone', { up: r.up, down: r.down }));
-    if (r.reloadInv) setTimeout(() => location.reload(), 1500); // the inventory came from another device
+    if (r.reloadInv) { reloadInventory(); document.dispatchEvent(new CustomEvent('inventory-changed')); emit('furniture'); } // the inventory came from another device
   } catch (e) {
     toast(t(e.setup ? 'cloudNeedsSetup' : e.offline ? 'cloudOffline' : e.expired || e.signin ? 'cloudSignInAgain' : 'cloudFailed'));
     if (e.setup) { renderCloud(); $('cloudDialog').showModal(); }

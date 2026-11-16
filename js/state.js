@@ -77,7 +77,7 @@ const DEFAULT_INVENTORY = [
 ].map((it) => ({ seats: 0, measured: false, supplier: '', sku: '', notes: '', stock: null, known: [], ...it, photo: I(it.id) }));
 
 const INV_KEY = 'rk-inventory', INV_VERSION = 2;
-export const INVENTORY = (() => {
+function buildInventory() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(INV_KEY) || '{}'); } catch { /* private mode */ }
   // Sizes confirmed by a supplier (the `known` fields) replace older saved estimates once per data update.
@@ -89,10 +89,14 @@ export const INVENTORY = (() => {
   });
   for (const [id, it] of Object.entries(saved)) if (id !== '__v' && !list.some((d) => d.id === id)) list.push(it); // pieces added later
   return list;
-})();
+}
+export const INVENTORY = buildInventory();
+// After the inventory arrived from another device: rebuild it in place (no page reload).
+export function reloadInventory() { INVENTORY.splice(0, INVENTORY.length, ...buildInventory()); saveInventory({ stamp: false }); }
 
-export function saveInventory() {
-  try { localStorage.setItem('rk-inv-updated', String(Date.now())); } catch { /* storage blocked */ }
+// stamp: false when nothing was edited (opening an event only refreshes the event's copies), so other devices don't fetch it
+export function saveInventory({ stamp = true } = {}) {
+  if (stamp) try { localStorage.setItem('rk-inv-updated', String(Date.now())); } catch { /* storage blocked */ }
   try { localStorage.setItem(INV_KEY, JSON.stringify({ __v: INV_VERSION, ...Object.fromEntries(INVENTORY.map((it) => [it.id, it])) })); } catch { /* storage blocked */ }
   // keep event furniture copies in sync with the measured sizes
   for (const f of state.furniture) {
