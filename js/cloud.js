@@ -106,7 +106,11 @@ async function doSync() {
   // inventory
   const invFile = byName.get('inventory.json'), invAt = inventoryUpdated(), remoteInvAt = +invFile?.appProperties?.updated || 0;
   if (invFile && remoteInvAt > invAt) { setInventoryRaw(await download(invFile.id), remoteInvAt); reloadInv = true; down++; }
-  else if (inventoryRaw() && (!invFile || invAt > remoteInvAt)) { await upload('inventory.json', inventoryRaw(), { updated: String(invAt || Date.now()) }, invFile?.id); up++; }
+  else if (inventoryRaw() && (!invFile || invAt > remoteInvAt)) {
+    const at = invAt || Date.now();
+    await upload('inventory.json', inventoryRaw(), { updated: String(at) }, invFile?.id); up++;
+    if (!invAt) setInventoryRaw(inventoryRaw(), at); // remember the same time here, so it is not fetched back
+  }
   setJSON(KNOWN, (await listProjects()).filter((p) => !blank(p) || byName.has(`event-${p.id}.json`)).map((p) => p.id));
   status('synced', { on: true, last: Date.now() });
   return { up, down, reloadInv };

@@ -246,7 +246,7 @@ export async function restoreAll(text) {
   }
   if (b.inventory) {
     const theirs = JSON.parse(b.inventory), here = JSON.parse(localStorage.getItem(INV_KEY) || '{}');
-    localStorage.setItem(INV_KEY, JSON.stringify({ ...here, ...theirs }));
+    localStorage.setItem(INV_KEY, JSON.stringify({ ...here, ...theirs })); localStorage.setItem('rk-inv-updated', String(Date.now()));
   }
   return n;
 }
