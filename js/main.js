@@ -794,7 +794,7 @@ async function cloudSyncNow() {
   try {
     await cloud.signIn();
     const r = await cloud.syncAll();
-    renderEventSelect();
+    renderEventSelect(); if ($('cloudDialog').open) $('cloudDialog').close();
     toast(t('cloudDone', { up: r.up, down: r.down }));
     if (r.reloadInv) setTimeout(() => location.reload(), 1500); // the inventory came from another device
   } catch (e) {

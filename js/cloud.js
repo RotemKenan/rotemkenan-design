@@ -84,11 +84,14 @@ async function doSync() {
   for (const id of gone) { const f = byName.get(`event-${id}.json`); if (f) { await remove(f.id); byName.delete(f.name); } }
   setJSON(GONE, []);
   // events
+  // an untouched empty event (each device opens one) is not worth sending around
+  const blank = (p) => !p.placed?.length && !p.venue?.segments?.length && !(p.mood?.images || []).some(Boolean);
   for (const p of local) {
     if (!p.id) continue;
     const f = byName.get(`event-${p.id}.json`);
     if (!f) {
       if (known.has(p.id)) { await deleteProject(p.id); if (p.id === state.id) emit('cloud-deleted'); continue; } // deleted on another device
+      if (blank(p)) continue;
       await upload(`event-${p.id}.json`, JSON.stringify(p), { updated: String(p.updated || 0), name: (p.eventName || '').slice(0, 100) }); up++;
       continue;
     }
@@ -104,7 +107,7 @@ async function doSync() {
   const invFile = byName.get('inventory.json'), invAt = inventoryUpdated(), remoteInvAt = +invFile?.appProperties?.updated || 0;
   if (invFile && remoteInvAt > invAt) { setInventoryRaw(await download(invFile.id), remoteInvAt); reloadInv = true; down++; }
   else if (inventoryRaw() && (!invFile || invAt > remoteInvAt)) { await upload('inventory.json', inventoryRaw(), { updated: String(invAt || Date.now()) }, invFile?.id); up++; }
-  setJSON(KNOWN, (await listProjects()).map((p) => p.id));
+  setJSON(KNOWN, (await listProjects()).filter((p) => !blank(p) || byName.has(`event-${p.id}.json`)).map((p) => p.id));
   status('synced', { on: true, last: Date.now() });
   return { up, down, reloadInv };
 }
