@@ -92,6 +92,7 @@ export const INVENTORY = (() => {
 })();
 
 export function saveInventory() {
+  try { localStorage.setItem('rk-inv-updated', String(Date.now())); } catch { /* storage blocked */ }
   try { localStorage.setItem(INV_KEY, JSON.stringify({ __v: INV_VERSION, ...Object.fromEntries(INVENTORY.map((it) => [it.id, it])) })); } catch { /* storage blocked */ }
   // keep event furniture copies in sync with the measured sizes
   for (const f of state.furniture) {
@@ -254,3 +255,9 @@ export async function renameProject(id, name) {
   const p = (await listProjects()).find((x) => x.id === id); if (!p) return;
   p.eventName = name; await tx('readwrite', (s) => s.put(p));
 }
+
+// ---------- cloud sync helpers (used by cloud.js) ----------
+export async function putProject(p) { await tx('readwrite', (s) => s.put(p)); }
+export const inventoryRaw = () => { try { return localStorage.getItem(INV_KEY); } catch { return null; } };
+export const inventoryUpdated = () => { try { return +localStorage.getItem('rk-inv-updated') || 0; } catch { return 0; } };
+export function setInventoryRaw(text, updated) { try { localStorage.setItem(INV_KEY, text); localStorage.setItem('rk-inv-updated', String(updated || Date.now())); } catch { /* storage blocked */ } }

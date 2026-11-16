@@ -38,6 +38,7 @@
         <summary class="icon" title="More">⋯</summary>
         <div class="menu-list">
           <button id="shareLink" data-i18n="shareLink">🔗 View-only link</button>
+          <button id="cloudMenu" data-i18n="cloudMenu">☁️ Cloud backup (Google Drive)</button>
           <button id="backupAll" data-i18n="backupAll">💾 Back up everything</button>
           <label class="btn"><span data-i18n="restoreAll">📂 Restore backup</span><input type="file" id="restoreAll" accept=".json" hidden /></label>
           <button id="renameEvent" data-i18n="renameEvent">Rename event</button>
@@ -63,6 +64,7 @@
         <button id="undoTop" title="Undo (Ctrl+Z)"><span class="ur-icon">↶</span> <span data-i18n="undo">Undo</span></button>
         <button id="redoTop" title="Redo (Ctrl+Shift+Z)"><span data-i18n="redo">Redo</span> <span class="ur-icon">↷</span></button>
       </div>
+      <button id="cloudBtn" class="count-top cloud-btn">☁️</button>
       <button id="countTop" class="count-top" data-i18n="countBtn">📋 Item count</button>
       <span id="saveState" class="save-state"></span>
       <button id="langToggle" class="lang">עברית</button>
@@ -260,6 +262,28 @@
       </div>
     </section>
   </main>
+
+  <dialog id="cloudDialog" class="pick-dialog">
+    <h2 data-i18n="cloudTitle">Cloud backup in your Google Drive</h2>
+    <p class="hint" data-i18n="cloudHint">Your events and inventory are kept in a private folder of your own Google Drive and synced to every device where you sign in.</p>
+    <div id="cloudSetup">
+      <p data-i18n="cloudSetupIntro">One-time setup (about 10 minutes, only once): register the app with Google.</p>
+      <ol class="cloud-steps">
+        <li data-i18n="cloudStep1">Open console.cloud.google.com with your Google account and create a project called “Event Studio”.</li>
+        <li data-i18n="cloudStep2">Turn on the “Google Drive API” for it (APIs &amp; Services → Library).</li>
+        <li data-i18n="cloudStep3">Set up the sign-in screen (OAuth consent / Google Auth Platform): type External, app name and your email; under Test users add your own email.</li>
+        <li data-i18n="cloudStep4">Create an OAuth client ID of type “Web application”, with authorised JavaScript origin https://rotemkenan.github.io</li>
+        <li data-i18n="cloudStep5">Copy the Client ID (it ends in .apps.googleusercontent.com) and paste it below — or send it to Claude to build it into the app for all your devices.</li>
+      </ol>
+      <div class="row"><input id="cloudClientId" placeholder="…apps.googleusercontent.com" dir="ltr" /><button id="cloudSaveId" class="primary" data-i18n="cloudSaveId">Save and connect</button></div>
+    </div>
+    <p id="cloudState" class="hint"></p>
+    <div class="row-actions">
+      <button id="cloudSync" class="primary" data-i18n="cloudSyncNow">Sign in and sync now</button>
+      <button id="cloudOff" class="ghost" data-i18n="cloudOff">Disconnect this device</button>
+      <button id="cloudClose" class="ghost" data-i18n="close">Close</button>
+    </div>
+  </dialog>
 
   <dialog id="countDialog" class="pick-dialog count-dialog">
     <h2 data-i18n="countTitle">Item count</h2>

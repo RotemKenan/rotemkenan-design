@@ -388,3 +388,9 @@ body.viewer .count-top { display: none !important; }
 /* the hall-look choice gets its own full-width row under units / wall height */
 .row:has(> label.wide) { flex-wrap: wrap; } label.wide { grid-column: 1 / -1; flex: 1 1 100%; }
 label.wide select { width: 100%; }
+
+/* cloud backup */
+.cloud-btn.warn { border-color: var(--champagne, #c9a96e); color: var(--champagne, #c9a96e); }
+.cloud-steps { padding-inline-start: 20px; line-height: 1.6; }
+.cloud-steps li { margin-bottom: 4px; }
+#cloudClientId { flex: 1; min-width: 0; }

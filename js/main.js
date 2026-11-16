@@ -8,6 +8,7 @@ import { blobToDataUrl } from './pptx.js';
 import { traceImage, strokesToSegments, dimensionsFor, readDimensions, toMetres } from './trace.js';
 import { suggestLayout, composeDesign } from './layout.js';
 import { LOOKS, autoLook } from './venuelook.js';
+import * as cloud from './cloud.js';
 import { findInventory, seatsOf } from './match.js';
 import * as plan from './plan2d.js';
 import * as view3d from './view3d.js';
@@ -130,7 +131,7 @@ $('dupEvent').onclick = async () => {
 };
 $('delEvent').onclick = async () => {
   if (!confirm(t('confirmDelete', { name: state.eventName || t('untitled') }))) return;
-  await deleteProject(state.id);
+  cloud.noteDeleted(state.id); await deleteProject(state.id);
   if (!(await restoreLastProject())) { newProject(t('newEventName')); await saveProject(); }
   afterOpen(); closeMenu();
 };
@@ -531,7 +532,7 @@ function autosave() {
   $('saveState').textContent = t('saving');
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
-    try { await saveProject(); $('saveState').textContent = '✓ ' + t('saved'); } catch { $('saveState').textContent = '⚠'; }
+    try { await saveProject(); $('saveState').textContent = '✓ ' + t('saved'); cloud.pushSoon(); } catch { $('saveState').textContent = '⚠'; }
     renderEventSelect();
   }, 600);
 }
@@ -776,3 +777,38 @@ $('countCsv').onclick = () => {
     ...countRows().map((r) => [r.supplier, r.name, r.sku, r.n, r.stock ?? '', r.size, r.seats].map(q).join(','))];
   download(`${fileBase()} - items.csv`, '\ufeff' + lines.join('\r\n'), 'text/csv'); // BOM so Excel reads Hebrew
 };
+
+// ---------- cloud backup (Google Drive) ----------
+function renderCloud(s) {
+  const on = cloud.cloudOn(), info = cloud.cloudInfo();
+  const label = !on ? t('cloudOffBtn') : s === 'syncing' || s === 'pending' ? t('cloudSyncing') : cloud.signedIn() ? t('cloudSynced', { time: info.last ? new Date(info.last).toLocaleTimeString(getLang() === 'he' ? 'he-IL' : 'en-GB', { hour: '2-digit', minute: '2-digit' }) : '' }) : t('cloudSignIn');
+  $('cloudBtn').textContent = label;
+  $('cloudBtn').classList.toggle('warn', on && !cloud.signedIn());
+  $('cloudSetup').classList.toggle('hidden', cloud.hasClientId());
+  $('cloudState').textContent = !cloud.hasClientId() ? '' : on ? (info.last ? t('cloudLast', { when: new Date(info.last).toLocaleString(getLang() === 'he' ? 'he-IL' : 'en-GB') }) : t('cloudConnected')) : t('cloudReady');
+  $('cloudOff').classList.toggle('hidden', !on);
+  $('cloudSync').classList.toggle('hidden', !cloud.hasClientId());
+}
+document.addEventListener('cloud-status', (e) => renderCloud(e.detail));
+async function cloudSyncNow() {
+  try {
+    await cloud.signIn();
+    const r = await cloud.syncAll();
+    renderEventSelect();
+    toast(t('cloudDone', { up: r.up, down: r.down }));
+    if (r.reloadInv) setTimeout(() => location.reload(), 1500); // the inventory came from another device
+  } catch (e) {
+    toast(t(e.setup ? 'cloudNeedsSetup' : e.offline ? 'cloudOffline' : e.expired || e.signin ? 'cloudSignInAgain' : 'cloudFailed'));
+    if (e.setup) { renderCloud(); $('cloudDialog').showModal(); }
+  }
+  renderCloud();
+}
+const openCloud = () => { closeMenu(); renderCloud(); $('cloudDialog').showModal(); };
+$('cloudBtn').onclick = () => (cloud.cloudOn() && cloud.hasClientId() ? cloudSyncNow() : openCloud());
+$('cloudMenu').onclick = openCloud;
+$('cloudClose').onclick = () => $('cloudDialog').close();
+$('cloudSync').onclick = () => cloudSyncNow();
+$('cloudSaveId').onclick = () => { const v = $('cloudClientId').value.trim(); if (!/apps\.googleusercontent\.com$/.test(v)) { toast(t('cloudBadId')); return; } cloud.setClientId(v); renderCloud(); cloudSyncNow(); };
+$('cloudOff').onclick = () => { cloud.signOut(); renderCloud(); toast(t('cloudDisconnected')); };
+onChange(async (reason) => { if (reason === 'cloud-deleted') { if (!(await restoreLastProject())) { newProject(t('newEventName')); await saveProject(); } afterOpen(); } });
+if (!VIEWER) renderCloud();
